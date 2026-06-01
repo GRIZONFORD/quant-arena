@@ -6,6 +6,39 @@ para asignar capital de forma adaptativa en cada período de rebalanceo.
 
 ---
 
+## Estructura del proyecto
+
+```
+Paraguay/
+├── pyproject.toml              # paquete `quant-arena` (instalable)
+├── README.md                   # este archivo
+├── quant_arena/                # PAQUETE CANÓNICO (código vivo)
+│   ├── core/                   # abstracciones (ABCs)
+│   ├── data/                   # datasets .parquet + PanelDataManager (Tier 1)
+│   ├── features/               # FeatureEngineer (32 indicadores)            [Tier base]
+│   ├── zoo/                    # BaseEstrategia + estrategias/
+│   ├── juez/                   # ttt_juez (TrueSkill Through Time)
+│   ├── metricas/               # performance, filtros + statistical_validation (DSR/PBO)
+│   │                           #   + beta_neutralizer                        [Tier 0/1.5]
+│   ├── backtesting/            # motor + transaction_costs + risk_overlay
+│   │                           #   + cross_sectional_engine                  [Tier 0/1]
+│   ├── calibracion/            # optimizador de hiperparámetros TTT
+│   ├── resultados/             # visualizador / tear-sheets
+│   ├── scripts/                # fetch_sp500, run_backtest, run_mvp_calibracion
+│   ├── tests/                  # pytest
+│   └── docs/                   # diseño + docs/tier/ (bitácoras Tier 0/1/1.5)
+├── results/                    # ARTEFACTOS de corridas (csv/html/curvas)
+└── legacy/                     # CÓDIGO CONGELADO (no vivo)
+    └── TTT/                    # motor plano original (autónomo, superseded)
+```
+
+**Convención:** el código vivo es el paquete `quant_arena/` (imports absolutos
+`from quant_arena.X import Y`). El trabajo Tier 0/1/1.5 fue consolidado aquí desde
+el antiguo volcado plano `TTT/`, hoy congelado en `legacy/TTT/` como referencia.
+Las bitácoras técnicas de cada Tier están en `quant_arena/docs/tier/`.
+
+---
+
 ## Stack tecnológico
 
 | Componente | Versión mínima | Rol |
