@@ -1,0 +1,29 @@
+# === Core — requeridas para el sistema base (TTT, motor, métricas) ===
+numpy>=1.26
+pandas>=2.2
+scipy>=1.13
+trueskillthroughtime>=0.1.0
+matplotlib>=3.8
+seaborn>=0.13
+pyarrow>=14.0
+
+# === ML Clásico — P1 (xgboost_strategy, hmm_garch_strategy, wavelet_lstm_strategy) ===
+xgboost>=2.0
+hmmlearn>=0.3
+arch>=6.0
+PyWavelets>=1.5
+
+# === Deep Learning — P2, CPU build por defecto ===
+# Para GPU CUDA 12.x, instalar con:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# Cubre: tft_strategy, mamba_ssm_strategy, stgnn_strategy,
+#        neural_ff_strategy, wavelet_lstm_strategy, ppo_rl_strategy
+torch>=2.1
+gymnasium>=0.29
+stable-baselines3>=2.0
+
+# === NLP / LLM Sentiment — P2 (llm_sentiment_strategy, requiere torch) ===
+transformers>=4.37
+
+# === Dev / Testing ===
+pytest>=9.0

@@ -1,0 +1,6 @@
+estrategia,sharpe,sortino,max_drawdown,calmar,information_ratio,alpha_tstat,turnover
+META_PORTFOLIO,0.2961,0.2887,-0.4725,0.1167,-0.3302,-0.0846,
+momentum_126d,0.3583,0.3392,-0.5678,0.1291,0.0,-1.1254,
+olps_rmr,-0.0596,-0.0679,-0.5154,-0.0157,-0.3163,0.0187,
+xgboost_trend,-0.293,-0.3978,-0.4959,-0.0452,-0.6298,-1.8815,
+hmm_garch,-10.9444,-9.0112,0.0,,-0.4633,-1.0196,

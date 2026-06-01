@@ -1,0 +1,654 @@
+# Changelog — quant_arena
+
+## [v0.2.9] — 2026-05-27 — Test Suite: LLM-Sentiment
+
+### Modelo completado
+- `zoo/estrategias/llm_sentiment_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas (nombre='llm_sentiment').
+  - TEST 2: Warm-up (n=30 < min_train=63 -> senal neutral).
+  - TEST 3: Operacion normal con 200 dias (modo fallback tecnico, sin FinBERT).
+  - TEST 4: Regimen bull extremo (mu=0.008, sigma=0.002, n=200).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=200).
+  - TEST 6: Boundary condition (n=63 = min_train_days exacto).
+
+### Estado del Zoo — COMPLETO
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| TFT | IMPLEMENTADO |
+| PPO-RL | IMPLEMENTADO |
+| Mamba-SSM | IMPLEMENTADO |
+| ST-GNN | IMPLEMENTADO |
+| LLM-Sentiment | IMPLEMENTADO |
+
+**Todos los 10 modelos del Zoo tienen suite de tests. Zoo completo.**
+
+---
+
+## [v0.2.8] — 2026-05-27 — Test Suite: ST-GNN
+
+### Modelo completado
+- `zoo/estrategias/stgnn_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas (nombre='stgnn_alpha').
+  - TEST 2: Warm-up (n=300 < umbral 494 -> senal neutral).
+  - TEST 3: Operacion normal con 700 dias de datos.
+  - TEST 4: Regimen crash extremo (mu=-0.002, sigma=0.035, n=700).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=700).
+  - TEST 6: Boundary condition (n=494 = min_train + lookback + 200).
+- Bugfix: `STGNNCore.forward()` corregido: `h.view()` -> `h.reshape()` para tensores no contiguos.
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| TFT | IMPLEMENTADO |
+| PPO-RL | IMPLEMENTADO |
+| Mamba-SSM | IMPLEMENTADO |
+| ST-GNN | IMPLEMENTADO |
+| Restantes (1) | En Desarrollo Activo |
+
+---
+
+## [v0.2.7] — 2026-05-27 — Test Suite: Mamba-SSM
+
+### Modelo completado
+- `zoo/estrategias/mamba_ssm_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas (nombre='mamba_ssm').
+  - TEST 2: Warm-up (n=300 < umbral 515 -> senal neutral).
+  - TEST 3: Operacion normal con 700 dias de datos.
+  - TEST 4: Regimen crash extremo (mu=-0.002, sigma=0.035, n=700).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=700).
+  - TEST 6: Boundary condition (n=515 = min_train + lookback + 200).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| TFT | IMPLEMENTADO |
+| PPO-RL | IMPLEMENTADO |
+| Mamba-SSM | IMPLEMENTADO |
+| Restantes (2) | En Desarrollo Activo |
+
+---
+
+## [v0.2.6] — 2026-05-27 — Test Suite: PPO-RL
+
+### Modelo completado
+- `zoo/estrategias/ppo_rl_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas (nombre='ppo_rl').
+  - TEST 2: Warm-up (n=200 < umbral 452 -> senal neutral).
+  - TEST 3: Operacion normal con 600 dias de datos.
+  - TEST 4: Regimen crash extremo (mu=-0.002, sigma=0.035, n=600).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=600).
+  - TEST 6: Boundary condition (n=452 = min_train + 200).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| TFT | IMPLEMENTADO |
+| PPO-RL | IMPLEMENTADO |
+| Restantes (3) | En Desarrollo Activo |
+
+---
+
+## [v0.2.5] — 2026-05-27 — Test Suite: TFT
+
+### Modelo completado
+- `zoo/estrategias/tft_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas (nombre='tft_trend').
+  - TEST 2: Warm-up (n=300 < umbral 494 -> senal neutral).
+  - TEST 3: Operacion normal con 700 dias de datos.
+  - TEST 4: Regimen crash extremo (mu=-0.002, sigma=0.035, n=700).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=700).
+  - TEST 6: Boundary condition (n=494 = min_train + lookback + 200).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| TFT | IMPLEMENTADO |
+| Restantes (4) | En Desarrollo Activo |
+
+---
+
+## [v0.2.4] — 2026-05-27 — Test Suite: Neural-FF
+
+### Modelo completado
+- `zoo/estrategias/neural_ff_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas.
+  - TEST 2: Warm-up (n=150 < umbral 257 -> senal neutral).
+  - TEST 3: Operacion normal con 600 dias de datos.
+  - TEST 4: Regimen crash extremo (mu=-0.002, sigma=0.035, n=600).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=600).
+  - TEST 6: Boundary condition (n=257 = min_train + 5).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Neural-FF | IMPLEMENTADO |
+| Restantes (5) | En Desarrollo Activo |
+
+---
+
+## [v0.2.3] — 2026-05-27 — Test Suite: Wavelet-LSTM
+
+### Modelo completado
+- `zoo/estrategias/wavelet_lstm_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas.
+  - TEST 2: Warm-up (n=300 < umbral efectivo 494 -> senal neutral).
+  - TEST 3: Operacion normal con 700 dias de datos.
+  - TEST 4: Regimen bull extremo (mu=0.005, sigma=0.008, n=700).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=700).
+  - TEST 6: Boundary condition (n=494 = min_train + lookback + buffer).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Wavelet-LSTM | IMPLEMENTADO |
+| Restantes (6) | En Desarrollo Activo |
+
+---
+
+## [v0.2.2] — 2026-05-27 — Test Suite: HMM+GARCH
+
+### Modelo completado
+- `zoo/estrategias/hmm_garch_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciacion y propiedades basicas.
+  - TEST 2: Warm-up (n=100 < min_train=252 -> senal neutral).
+  - TEST 3: Operacion normal con 600 dias de datos.
+  - TEST 4: Volatilidad extrema (crash-like, sigma=0.04, n=600).
+  - TEST 5: DataFrame sin columna 'Close' -> neutral sin excepcion (n=600).
+  - TEST 6: Boundary condition (n=252 == min_train_days exacto).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | IMPLEMENTADO |
+| OLPS-RMR | IMPLEMENTADO |
+| HMM+GARCH | IMPLEMENTADO |
+| Restantes (7) | En Desarrollo Activo |
+
+---
+
+## [v0.2.1] — 2026-05-27 — Test Suite: OLPS-RMR
+
+### Modelo completado
+- `zoo/estrategias/olps_rmr_strategy.py` — Suite de 6 tests unitarios agregada.
+  - TEST 1: Instanciación y propiedades básicas.
+  - TEST 2: Warm-up (n < min_train+window → señal neutral).
+  - TEST 3: Operación normal con 100 días de datos.
+  - TEST 4: Mercado de baja volatilidad (mean-reversion).
+  - TEST 5: DataFrame sin columna 'Close' → neutral sin excepción.
+  - TEST 6: Boundary condition (exactamente datos mínimos).
+
+### Estado del Zoo
+| Modelo | Estado |
+|--------|--------|
+| XGBoost + Optuna | ✅ IMPLEMENTADO |
+| OLPS-RMR | ✅ IMPLEMENTADO |
+| Restantes (8) | En Desarrollo Activo |
+
+---
+
+## [v0.1.0] — 2026-05-25 — Arquitectura Base + Módulos Métricas y Juez
+
+### Estado del diseño
+Inicialización del framework. Arquitectura definida en 6 módulos; implementación
+completa de `core`, `metricas` y `juez`. Los módulos `backtesting`, `zoo` y
+`resultados` tienen esqueletos funcionales.
+
+---
+
+### Archivos creados
+
+#### `quant_arena/core/abstracciones.py`
+- `MetricasResultado` — Dataclass DTO con 7 KPIs institucionales (sharpe, sortino,
+  max_drawdown, calmar, information_ratio, alpha_tstat, turnover).
+- `AbstractMetricas` — Interfaz ABC para calculadoras de métricas.
+- `AbstractStrategy` — Interfaz ABC para sub-estrategias del Zoo.
+- `AbstractJuez` — Interfaz ABC para el Juez algorítmico.
+
+#### `quant_arena/metricas/performance_metrics.py`
+- `PerformanceMetrics(AbstractMetricas)` — Implementación vectorizada completa.
+  - `sharpe_ratio()` — Sharpe anualizado con exceso sobre RFR.
+  - `sortino_ratio()` — Downside deviation con MAR = RFR diaria.
+  - `max_drawdown()` — Vectorizado via `cummax` de Pandas.
+  - `calmar_ratio()` — CAGR / |MDD|.
+  - `information_ratio()` — E[r_activo] / TE * sqrt(252).
+  - `alpha_tstat()` — OLS vectorizado con `pinv` (Jensen alpha t-stat).
+  - `turnover()` — Rotación media diaria del portafolio.
+  - `calcular_todas()` — Punto de entrada unificado -> `MetricasResultado`.
+  - `calcular_rolling()` — Cualquier métrica en ventana rodante causal.
+
+#### `quant_arena/juez/ttt_juez.py`
+- `TTTJuez(AbstractJuez)` — Adaptador de `TrueSkillThroughTime` (Landfried, 2024).
+  - `registrar_periodo()` — Mapea ranking por KPI a `composition` de TTT.
+  - `actualizar()` — Ejecuta `History.convergence(epsilon, iterations)`.
+  - `habilidades_latentes()` — Extrae `(mu, sigma)` de `learning_curves()`.
+  - `pesos_asignacion()` — 3 métodos: `mu/sigma`, `mu` bruto, `softmax`.
+  - `curvas_aprendizaje()` — Trayectoria temporal completa para visualización.
+  - `log_evidencia()` — `History.log_evidence()` para selección de hiperparámetros.
+  - `snapshot_estado()` — DataFrame de estado posterior (logging/monitoreo).
+  - `exportar_curvas_df()` — Long-format para matplotlib/seaborn.
+
+#### `quant_arena/zoo/base_estrategia.py`
+- `RegistroZoo` — Registro singleton con decorador `@RegistroZoo.registrar`.
+- `MomentumTransversal(AbstractStrategy)` — Estrategia de referencia (12-1m).
+
+---
+
+### Decisiones de diseño
+
+| Decisión | Justificación |
+|---|---|
+| `AbstractMetricas` stateless | Facilita testeo unitario y reutilización en rolling windows |
+| `MetricasResultado` como dataclass | Tipado estricto + serialización `asdict()` sin overhead |
+| `TTTJuez` con flag `_dirty` | Evita recomputar convergencia cuando no hay nuevos datos |
+| `modo_causal_estricto` en `TTTJuez` | Distingue modo backtesting (filtrado) de análisis histórico (suavizado) |
+| `RegistroZoo` con decorador | Desacopla el Motor del Zoo; nuevas estrategias no modifican infraestructura |
+| `pinv` en `alpha_tstat` | Estabilidad numérica ante benchmarks con baja varianza en la ventana |
+| `times` en `History` (días desde época) | Permite a TTT modelar aceleración de cambio de régimen entre períodos |
+| Pesos TTT: `mu/sigma` como default | Análogo bayesiano del Sharpe Ratio — pondera señal vs. incertidumbre |
+
+---
+
+### Flujo de datos (DAG causal)
+
+```
+Zoo.generar_señales(datos, t-1)
+    -> Backtesting.Motor: retornos período [t-W, t-1]
+        -> PerformanceMetrics.calcular_todas()
+            -> MetricasResultado {sharpe, sortino, ...}
+                -> TTTJuez.registrar_periodo(metricas, tiempo=t-1)
+                    -> TTTJuez.actualizar()  [solo con datos hasta t-1]
+                        -> pesos_asignacion()
+                            -> Zoo (siguiente período t)
+```
+
+---
+
+### API de TrueSkillThroughTime usada (v0.1.0)
+
+```python
+# Inicialización (ref: ejemplo ATP en README oficial)
+h = History(composition=composition, times=days, sigma=1.6, gamma=0.036)
+
+# Inferencia EP
+h.convergence(epsilon=0.01, iterations=10)
+
+# Extracción de posteriors
+lc = h.learning_curves()  # {agente: [(t, Gaussian(mu, sigma)), ...]}
+
+# Comparación de modelos
+evidencia = h.log_evidence()
+```
+
+---
+
+### Pendiente (próximas iteraciones)
+
+- `[ ]` `backtesting/motor.py` — Walk-forward causal con ventana expandiente.
+- `[ ]` `resultados/visualizador.py` — Plots de curvas TTT + equity curves.
+- `[ ]` Optimización de hiperparámetros TTT via `log_evidencia()` (grid/Bayesian).
+- `[ ]` Bootstrap para intervalos de confianza de KPIs en `resultados/`.
+- `[ ]` Integración de datos S&P 500 1997-2026 en `data/`.
+- `[ ]` Suite completa de tests en `tests/test_metricas.py` y `tests/test_juez.py`.
+- `[ ]` Estrategias adicionales en `zoo/estrategias/`: Value, Low-Vol, Quality, Carry.
+
+---
+
+## [v0.2.0] — 2026-05-25 — Filtro de Kalman + Zoo Infrastructure + MomentumStrategy
+
+### Archivos creados / modificados
+
+#### `quant_arena/metricas/filtros.py` (NUEVO)
+- `_EstadoKalman` — NamedTuple interno para estado `(x, P)`.
+- `KalmanSignalFilter` — Filtro de Kalman escalar, causal y NaN-safe.
+  - `filtrar(serie, x0)` — Algoritmo exacto secuencial. NaN = paso predict-only.
+  - `filtrar_con_varianza(serie)` — Retorna `(x_filtrado, P_t)` para bandas de confianza.
+  - `filtrar_rapido(serie)` — Aproximación EWMA vectorizada usando `K*` estacionario.
+  - `filtrar_dataframe(df, rapido)` — Aplica el filtro por columna.
+  - `filtrar_historial_metricas(historial)` — Interfaz directa con salida del Motor.
+  - `ganancia_estacionaria` — Propiedad: solución analítica de Riccati escalar.
+  - `periodos_convergencia` — Estimación de períodos para alcanzar el 99% de K*.
+
+#### `quant_arena/zoo/base_estrategia.py` (REESCRITO)
+- `normalizar_pesos(señales, long_only, max_peso)` — Función módulo-nivel vectorizada;
+  truncamiento iterativo para restricción max_peso por activo.
+- `señales_a_binario(scores, top_n, ascending)` — Máscara top-N via `rank()` sin sort.
+- `RegistroZoo` — Mejorado: guard de nombre duplicado, `listar_con_descripcion()`,
+  `autodescubrir(paquete)` para discovery automático via `pkgutil`.
+- `ConfigEstrategia` — Dataclass declarativa de instanciación de estrategias.
+- `ZooManager` — Fachada del Motor sobre el conjunto activo de instancias:
+  `agregar()`, `agregar_desde_config()`, `generar_señales_todas()`,
+  `calcular_retornos_todos()`.
+- **Eliminado**: `MomentumTransversal` (movido a `zoo/estrategias/ejemplo_momentum.py`).
+
+#### `quant_arena/zoo/estrategias/ejemplo_momentum.py` (NUEVO)
+- `MomentumStrategy(AbstractStrategy)` — Registrada como `'momentum_126d'`.
+  - Señal: `precio(t) / precio(t-ventana) - 1` (vectorizado, un slice + división).
+  - Selección top N via `señales_a_binario()` (sin sort explícito, O(N log N) rank).
+  - 3 esquemas de pesos: `'equal'`, `'proporcional'` (∝ señal), `'rank'` (∝ 1/rango).
+  - `max_peso_activo`: límite de concentración con truncamiento iterativo.
+  - `calcular_retornos()`: dot product vectorizado `(pesos * retornos).sum(axis=1)`.
+
+---
+
+### Decisiones de diseño adicionales
+
+| Decisión | Justificación |
+|---|---|
+| Loop secuencial en `KalmanSignalFilter.filtrar()` | El filtro de Kalman es inherentemente recursivo; el loop itera sobre el eje temporal, no sobre activos/filas de precio |
+| `filtrar_rapido()` como EWMA vectorizado | Para series largas (> 1000 obs.), K* converge rápidamente; EWMA via `pd.ewm` es O(N) sin GIL |
+| `normalizar_pesos` como función de módulo | Utilidad compartida por múltiples estrategias; no es responsabilidad de `AbstractStrategy` (SRP) |
+| `ZooManager.generar_señales_todas()` filtra datos antes de delegar | Doble garantía causal: el Manager refuerza el contrato de `AbstractStrategy` |
+| `señales_a_binario()` usa `rank()` | Evita `sort_values()` que es O(N log N) con overhead de reordenamiento; `rank()` también O(N log N) pero sin copia del índice |
+| `ConfigEstrategia` como dataclass | Separación configuración/instanciación; el Motor puede leer configs de YAML/JSON sin importar clases concretas |
+| Guard de nombre duplicado en `RegistroZoo.registrar()` | Detecta colisiones de nombres en tiempo de importación, no en runtime |
+
+---
+
+### Dependencias externas
+
+| Paquete | Versión mínima | Uso |
+|---|---|---|
+| `trueskillthroughtime` | 0.1.0 | Modelo TTT (Landfried, 2024) |
+| `numpy` | 1.26 | Álgebra lineal vectorizada |
+| `pandas` | 2.2 | Series temporales y DataFrames |
+| `scipy` | 1.13 | Reservado para bootstrap en módulo Resultados |
+| `matplotlib` | 3.8 | Visualización curvas de aprendizaje TTT |
+| `seaborn` | 0.13 | Heatmaps de correlación de habilidades |
+
+---
+
+## [v0.3.0] — 2026-05-25 — Motor de Backtesting Walk-Forward
+
+### Archivos creados / modificados
+
+#### `quant_arena/backtesting/motor.py` (NUEVO — 14.1 KB)
+
+**`ResultadoBacktest`** (dataclass):
+
+| Atributo | Tipo | Descripción |
+|---|---|---|
+| `retornos_meta` | `pd.Series` | Retornos diarios del meta-portafolio |
+| `retornos_estrategias` | `pd.DataFrame` | [fecha × estrategia] retornos diarios |
+| `pesos_juez` | `pd.DataFrame` | [fecha_rebalanceo × estrategia] pesos TTT |
+| `pesos_portafolio` | `Dict[str, pd.DataFrame]` | Snapshots ticker-level por estrategia |
+| `metricas_rolling` | `pd.DataFrame` | Señal bruta (ruidosa) en rebalanceos |
+| `metricas_kalman` | `pd.DataFrame` | Señal filtrada por Kalman en rebalanceos |
+| `equity_curve()` | método | NAV acumulado del meta-portafolio |
+| `pesos_portafolio_diarios()` | método | Expande snapshots a frecuencia diaria (ffill) |
+| `resumen_estadistico()` | método | Tabla KPIs finales (todos los módulos Métricas) |
+
+**`BacktestEngine`** (clase principal):
+
+Flujo causal por rebalanceo `t_k`:
+1. `_retornos_periodo()` — retornos `(t_{k-1}, t_k]` con pesos de `t_{k-1}` (dot product vectorizado)
+2. `calcular_rolling()` — último valor de la ventana rodante = señal ruidosa en `t_k`
+3. `KalmanSignalFilter.filtrar()` — suaviza el historial acumulado de observaciones hasta `t_k`
+4. `TTTJuez.registrar_periodo()` + `.actualizar()` — inferencia EP con señal limpia
+5. `generar_señales_todas(datos, t_k)` — nuevos pesos para el período siguiente
+
+| Método | Responsabilidad |
+|---|---|
+| `ejecutar_walk_forward(inicio, fin, frecuencia)` | Orquesta el loop completo |
+| `_generar_fechas_rebalanceo()` | Snap a días de trading disponibles; soporta `int` y `str` offset Pandas |
+| `_retornos_periodo()` | Retornos incrementales con pct_change vectorizado, NaN-safe |
+| `_ensamblar_meta()` | Aplica pesos TTT por período (causal) para construir retornos del meta-portafolio |
+| `_consolidar()` | Ensambla todas las estructuras acumuladas en `ResultadoBacktest` |
+
+#### `quant_arena/backtesting/__init__.py` (ACTUALIZADO)
+- Exporta `BacktestEngine` y `ResultadoBacktest`.
+
+---
+
+### Invariantes de causalidad del Motor
+
+```
+pesos_vigentes[nombre] en t_k  ←  datos[0:t_{k-1}]   (señales del rebalanceo anterior)
+retornos_periodo[(t_{k-1}, t_k]]  ←  pesos_vigentes × precios[(t_{k-1}, t_k]]
+metricas_rolling[t_k]  ←  retornos_acumulados[0:t_k]
+kalman_filtrado[t_k]  ←  metricas_rolling[0:t_k]      (filtro causal elemento a elemento)
+TTT_composition[t_k]  ←  kalman_filtrado[0:t_k]
+pesos_juez[t_k]  ←  TTT.habilidades_latentes()         (posterior tras observar hasta t_k)
+pesos_siguiente_período  ←  generar_señales(datos[0:t_k])   ← usa t_k como corte duro
+```
+
+### Decisiones de diseño adicionales
+
+| Decisión | Justificación |
+|---|---|
+| `listas_ret` como `List[Tuple[Timestamp, float]]` | Append O(1) por cada día; construcción de Series solo al calcular métricas |
+| `pesos_juez_actuales` inicializado como equal-weight | Neutral durante el warm-up; evita sesgo hacia cualquier estrategia antes de que TTT tenga datos |
+| `_ensamblar_meta()` como método estático | No accede a `self._datos`; facilita testeo unitario aislado |
+| `frecuencia` acepta `int` y `str` | `int` para frecuencias fijas en días hábiles; `str` para alineación con fin de mes/trimestre |
+| Catch-all en `TTTJuez.actualizar()` | Dependencia externa (trueskillthroughtime); el Motor sigue ejecutando con pesos previos si falla |
+| `pesos_portafolio` almacena snapshots (no serie diaria) | Ahorra memoria; `pesos_portafolio_diarios()` expande con ffill cuando se necesita para visualización |
+
+---
+
+## [v1.0.0] — 2026-05-25 — Visualizador (Tear Sheet) + Suite de Tests
+
+### Estado del diseño
+Arquitectura base completa. Los 6 módulos planificados tienen implementación
+funcional. La suite de tests cubre los módulos `metricas` y `juez` con tests
+unitarios aislados (sin dependencias externas reales).
+
+---
+
+### Archivos creados / modificados
+
+#### `quant_arena/resultados/visualizador.py` (NUEVO — ~350 líneas)
+
+**`ReporteCuantitativo`**:
+
+| Método | Descripción |
+|---|---|
+| `plot_equity_curve(log_scale, mostrar_estrategias, mostrar_tabla_kpi)` | Equity curve NAV + drawdown subpanel + tabla KPI en caja de texto |
+| `plot_ttt_learning_curves()` | Curvas de aprendizaje TTT por estrategia (μ ± σ como banda sombreada) |
+| `plot_asignacion_dinamica()` | Área apilada de asignación de capital (stackplot); ordenado por asignación media descendente |
+| `plot_señal_kalman()` | Señal bruta vs. filtrada por Kalman por estrategia; subplots en grid |
+| `generar_tearsheet(ruta_salida, log_scale, incluir_curvas_ttt)` | Exporta PDF multi-página con todas las visualizaciones |
+| `_caja_kpi(ax, nav, bench)` | Inserta caja de texto con CAGR, Vol, Sharpe y MDD como anotación estática |
+
+Decisiones de implementación:
+- `plt.close(fig)` en bloque `finally` dentro de `generar_tearsheet()` — garantiza liberación de memoria incluso ante excepción en generación de plot.
+- Detección de estilos con fallback: `seaborn-v0_8-whitegrid` → `seaborn-whitegrid` → `ggplot` → default matplotlib; compatible con matplotlib 3.6–3.9.
+- Conversión tiempo TTT → fechas: `pd.to_datetime(tiempo * 86_400, unit='s').normalize()` (días desde epoch Unix).
+- `GridSpec` con `height_ratios=[3.5, 1, 0.01]` para equity + drawdown + barra de color (placeholder).
+- Constantes de color: `_COLOR_META='#0D3B8C'`, `_COLOR_BENCH='#757575'`, `_COLOR_DD='#C62828'`.
+
+#### `quant_arena/resultados/__init__.py` (ACTUALIZADO)
+- Exporta `ReporteCuantitativo`.
+
+#### `quant_arena/tests/conftest.py` (NUEVO)
+- Inyecta stub de `trueskillthroughtime` en `sys.modules` a nivel de módulo.
+- El stub provee `Gaussian(mu, sigma)` con atributos reales `.mu` y `.sigma`.
+- `History` y `Player` son `MagicMock`; no se ejecuta inferencia EP en tests.
+- Se activa solo cuando el paquete real no está instalado (`ImportError`).
+
+#### `quant_arena/tests/test_metricas.py` (NUEVO — ~220 líneas)
+
+Clases de test:
+
+| Clase | Cobertura |
+|---|---|
+| `TestValidacion` | `ValueError` para series < 20 obs y con NaN; todos los métodos |
+| `TestSharpeRatio` | std=0 → 0.0; caso normal finito; signo correcto |
+| `TestSortinoRatio` | sin negativos → inf; caso normal; solo negativos < 0 |
+| `TestMaxDrawdown` | siempre ≤ 0; retornos monotone → 0.0; acepta 2 obs |
+| `TestCalmarRatio` | MDD=0 → nan; resultado es float |
+| `TestMetricasConBenchmark` | IR con serie idéntica → 0; alpha_tstat finito |
+| `TestTurnover` | pesos constantes → 0; rotación total → 2.0 |
+| `TestCalcularTodas` | retorna `MetricasResultado`; todos los campos verificados; con pesos |
+| `TestCalcularRolling` | longitud, NaN iniciales, valores post-ventana, error en métrica inválida |
+
+#### `quant_arena/tests/test_juez.py` (NUEVO — ~200 líneas)
+
+Grupos de test:
+
+| Grupo | Cobertura |
+|---|---|
+| `test_pesos_suman_uno_*` | Los 3 métodos × caso normal × 2 y 3 estrategias |
+| `test_todos_los_pesos_no_negativos` | Garantía pesos ≥ 0 para los 3 métodos |
+| `test_fallback_equal_weight_*` | `mu` y `mu_sobre_sigma` con todos los scores ≤ 0 → 1/N |
+| `test_softmax_mu_*` | Siempre peso > 0; mu mixtos suman 1.0 |
+| `test_metodo_invalido_lanza_error` | `ValueError` con mensaje de error útil |
+| `test_pesos_asignacion_sin_historia_retorna_vacio` | Sin datos → `{}` |
+| `test_registrar_periodo_*` | Ignora < 2 válidas; ignora NaN; acepta 2; ordena ganador primero; vacío no modifica |
+| `test_dirty_flag_*` | `_dirty=True` tras `registrar_periodo()`; `_history=None` invalidado |
+| `test_pesos_consistentes_*` | Idempotencia en llamadas consecutivas |
+
+---
+
+### Decisiones de diseño adicionales
+
+| Decisión | Justificación |
+|---|---|
+| Inyección de `_history` mock en tests de juez | Evita ejecutar EP real; tests deterministicos O(1); no requiere trueskillthroughtime instalado |
+| `conftest.py` con stub a nivel módulo (no fixture) | El import `from trueskillthroughtime import ...` ocurre en carga de módulo; el stub debe estar en `sys.modules` antes de la importación |
+| `_Gaussian` con atributos reales en stub | `float(gaussiano_final.mu)` en `habilidades_latentes()` requiere atributo real, no `MagicMock` |
+| Tests parametrizados con `@pytest.mark.parametrize` | Cobertura de los 3 métodos de `pesos_asignacion()` sin duplicar código |
+| `pytest.approx` para comparaciones flotantes | Evita falsos positivos por errores de punto flotante en sumas de pesos |
+
+---
+
+### Invariantes de arquitectura verificados por la suite
+
+```
+PerformanceMetrics._validar()  →  ValueError para series inválidas (no NaN silencioso)
+BacktestEngine                 →  captura ValueError y retorna MetricasResultado() vacío
+TTTJuez.pesos_asignacion()     →  sum(pesos) == 1.0 en TODOS los casos posibles
+TTTJuez.pesos_asignacion()     →  peso >= 0 para todos
+TTTJuez.registrar_periodo()    →  sin side-effects si < 2 estrategias válidas
+ReporteCuantitativo            →  plt.close() garantizado en finally (sin memory leaks)
+```
+
+---
+
+### Estado final de pendientes
+
+- `[x]` `backtesting/motor.py` — Walk-forward causal con ventana expandiente.
+- `[x]` `resultados/visualizador.py` — Plots de curvas TTT + equity curves + tearsheet PDF.
+- `[x]` `backtesting/motor.py` — Walk-forward causal con ventana expandiente.
+- `[x]` `resultados/visualizador.py` — Plots de curvas TTT + equity curves + tearsheet PDF.
+- `[x]` Suite completa de tests en `tests/test_metricas.py` y `tests/test_juez.py`.
+- `[ ]` Bootstrap para intervalos de confianza de KPIs en `resultados/`.
+- `[ ]` Integración de datos S&P 500 1997-2026 en `data/`.
+- `[ ]` Estrategias adicionales en `zoo/estrategias/`: Value, Low-Vol, Quality, Carry.
+
+---
+
+## [v1.1.0] — 2026-05-25 — Calibración Empírica de Bayes (Módulo `calibracion/`)
+
+### Estado del diseño
+Primer módulo de la fase de optimización. Implementa la calibración automática
+de los hiperparámetros `sigma` y `gamma` del modelo TTT maximizando la
+log-evidencia marginal `log p(D | σ, γ)` via `scipy.optimize.minimize`.
+
+---
+
+### Archivos creados / modificados
+
+#### `quant_arena/juez/ttt_juez.py` (MODIFICADO)
+- `exportar_historial()` — nuevo método público que retorna copias defensivas de
+  `_composition` y `_times` para consumo por `OptimizadorTTT` sin exponer referencias
+  mutables al estado interno del Juez.
+  - `_composition` → `copy.deepcopy`: estructura anidada `List[List[List[str]]]`; copia
+    superficial dejaría sub-listas compartidas entre original y consumidor.
+  - `_times` → `list()`: suficiente porque `float` es inmutable en Python.
+  - `AbstractJuez` **no fue modificado**: el método es concreto adicional en `TTTJuez`.
+
+#### `quant_arena/calibracion/__init__.py` (NUEVO)
+- Exporta `OptimizadorTTT`.
+
+#### `quant_arena/calibracion/optimizador.py` (NUEVO — ~180 líneas)
+
+**`OptimizadorTTT`**:
+
+| Método | Descripción |
+|---|---|
+| `_evaluar_log_evidencia(log_params, composition, times)` | Función escalar: instancia `History` temporal, ejecuta EP, retorna `log p(D | σ, γ)`. Captura todas las excepciones → `_LOG_EV_FALLBACK = -1e9`. |
+| `calibrar(composition, times, bounds)` | API pública. Minimiza `−log_evidencia` con `L-BFGS-B` en espacio logarítmico. Retorna `{'sigma_optimo', 'gamma_optimo', 'log_evidencia_maxima'}`. |
+
+Principio matemático:
+
+$$(\sigma^*, \gamma^*) = \arg\max_{\sigma,\gamma>0} \log p(\mathcal{D} \mid \sigma, \gamma)$$
+
+implementado como `min_θ −log p(D | eᶿ⁰, eᶿ¹)` con `θ = (log σ, log γ) ∈ ℝ²`.
+
+#### `quant_arena/tests/test_optimizador.py` (NUEVO — ~200 líneas, 16 tests)
+
+| Clase de test | Cobertura |
+|---|---|
+| `TestExportarHistorial` | deepcopy verification; times independiente; orden ganador |
+| `TestCalibracionEstructura` | claves exactas; sigma > 0; gamma > 0; log_ev finito |
+| `TestCalibracionBounds` | 3 configuraciones de bounds paramétricas |
+| `TestPenalizacionExtremos` | log_ev en óptimo > log_ev en gamma→0, sigma extremo, ambos extremos |
+| `TestFallback` | < 2 períodos → warning; EP siempre falla → warning; iniciales preservados |
+
+#### `quant_arena/docs/superpowers/specs/2026-05-25-calibracion-ttt-design.md` (NUEVO)
+- Design spec formal con decisiones D1–D5 y flujo de uso canónico.
+
+---
+
+### Decisiones de diseño
+
+| Decisión | Justificación |
+|---|---|
+| `exportar_historial()` como puente DRY | Evita duplicar la lógica ranking→composition de `registrar_periodo()` en el optimizador |
+| `copy.deepcopy(_composition)` + `list(_times)` | Copia superficial sobre `List[List[List[str]]]` deja sub-listas compartidas; `float` es inmutable → `list()` suficiente |
+| Optimización en espacio log `θ = (log σ, log γ)` | Garantiza σ, γ > 0 sin restricciones de desigualdad; mejora estabilidad numérica de L-BFGS-B en dominios semi-infinitos |
+| `epsilon_ep=0.1`, `max_iter_ep=5` durante búsqueda | Reduce ~6× el costo por evaluación; la dirección del gradiente EP es suficientemente precisa con tolerancia suelta |
+| `_LOG_EV_FALLBACK = -1e9` como sentinela | Valor finito que scipy puede manejar; indica puntos degenerados sin lanzar excepciones que abortarían la minimización |
+| `History` temporal por evaluación | `History` es stateful (acumula mensajes EP); crear una instancia nueva por llamada garantiza independencia entre evaluaciones |
+| `np.clip` post-optimización sobre `exp(x)` | Garantía adicional de bounds incluso si L-BFGS-B devuelve un punto marginalmente fuera por error de punto flotante |
+
+---
+
+### Flujo de uso canónico
+
+```python
+composition, times = juez.exportar_historial()
+opt = OptimizadorTTT(sigma_inicial=1.6, gamma_inicial=0.036)
+params = opt.calibrar(composition, times)
+juez_v2 = TTTJuez(sigma=params['sigma_optimo'], gamma=params['gamma_optimo'])
+```
+
+---
+
+### Estado de pendientes actualizado
+
+- `[x]` `calibracion/optimizador.py` — Optimización de hiperparámetros TTT via `log_evidencia()`.
+- `[ ]` Bootstrap para intervalos de confianza de KPIs en `resultados/`.
+- `[ ]` Integración de datos S&P 500 1997-2026 en `data/`.
+- `[ ]` Estrategias adicionales en `zoo/estrategias/`: Value, Low-Vol, Quality, Carry.

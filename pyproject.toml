@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-arena"
+version = "0.1.0"
+description = "Framework de backtesting cuantitativo con ranking bayesiano TTT para S&P 500"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "trueskillthroughtime>=0.1.0",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+    "pyarrow>=14.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "xgboost>=2.0",
+    "hmmlearn>=0.3",
+    "arch>=6.0",
+    "PyWavelets>=1.5",
+]
+dl = [
+    "torch>=2.1",
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.0",
+]
+nlp = [
+    "transformers>=4.37",
+    "torch>=2.1",
+]
+dev = [
+    "pytest>=9.0",
+]
+all = [
+    "xgboost>=2.0",
+    "hmmlearn>=0.3",
+    "arch>=6.0",
+    "PyWavelets>=1.5",
+    "torch>=2.1",
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.0",
+    "transformers>=4.37",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["quant_arena*"]
+
+[tool.pytest.ini_options]
+testpaths = ["quant_arena/tests"]
