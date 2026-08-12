@@ -13,3 +13,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Legacy congelado (no vivo, no se sube)
+legacy/
