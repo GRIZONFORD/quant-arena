@@ -11,7 +11,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from quant_arena.backtesting.position_risk import TakeProfitATRRule, calcular_atr_pct, retornos_periodo_con_riesgo
+from quant_arena.backtesting.risk_overlay import RiskOverlay
 from quant_arena.core.abstracciones import AbstractJuez, MetricasResultado
+from quant_arena.core.excepciones import SizingError
+from quant_arena.core.interfaces_riesgo import AbstractPositionSizer
 from quant_arena.metricas.filtros import KalmanSignalFilter
 from quant_arena.metricas.performance_metrics import PerformanceMetrics
 from quant_arena.zoo.base_estrategia import ZooManager
@@ -152,6 +156,12 @@ class BacktestEngine:
         kalman_config: Optional[Dict[str, float]] = None,
         ventana_metricas: int = 63,
         metrica_ranking: str = 'sharpe',
+        risk_overlay: Optional[RiskOverlay] = None,
+        position_sizer: Optional[AbstractPositionSizer] = None,
+        cap_bruto_exposicion: float = 1.0,
+        tp_rule: Optional[TakeProfitATRRule] = None,
+        datos_ohlc: Optional[Dict[str, pd.DataFrame]] = None,
+        atr_window: int = 14,
     ) -> None:
         """
         Args:
@@ -168,11 +178,41 @@ class BacktestEngine:
                               También es el mínimo de observaciones para activar TTT.
             metrica_ranking:  Campo de MetricasResultado para ranking en TTT
                               (ej. 'sharpe', 'sortino', 'information_ratio').
+            risk_overlay:     RiskOverlay opcional (target-vol + trailing stop
+                              global) aplicado a la exposición de CADA
+                              estrategia entre rebalanceos, usando el track
+                              record propio de esa estrategia (causal: solo
+                              el fold recién cerrado). None (default) = motor
+                              sin gestión de riesgo, comportamiento idéntico
+                              al de antes de esta integración.
+            position_sizer:   AbstractPositionSizer opcional (ej.
+                              KellyBayesianSizer) que reemplaza
+                              `TTTJuez.pesos_asignacion()` (pesos que suman 1)
+                              por exposición absoluta justificada por el edge
+                              realizado y la incertidumbre del posterior TTT.
+                              None (default) = se usa `pesos_asignacion()`
+                              sin cambios.
+            cap_bruto_exposicion: Cota de exposición bruta agregada (suma de
+                              |peso| sobre todas las estrategias) cuando
+                              `position_sizer` está activo. Renormaliza si se
+                              excede. Ignorado si `position_sizer` es None.
+            tp_rule:          TakeProfitATRRule opcional para recorte parcial
+                              de exposición intra-período. Requiere
+                              `datos_ohlc`. None (default) = retornos de
+                              período vectorizados sin path-dependency
+                              (idéntico al comportamiento previo).
+            datos_ohlc:       {ticker: DataFrame OHLCV en minúsculas} para el
+                              cálculo causal de ATR% de entrada (ver
+                              `position_risk.calcular_atr_pct`). Solo se usa
+                              si `tp_rule` no es None.
+            atr_window:       Ventana del ATR (Wilder) para `tp_rule`.
         """
         if len(zoo) == 0:
             raise ValueError(
                 "ZooManager está vacío. Agrega estrategias con zoo.agregar() antes de ejecutar."
             )
+        if cap_bruto_exposicion <= 0.0:
+            raise ValueError(f"cap_bruto_exposicion={cap_bruto_exposicion} debe ser > 0.")
 
         self._zoo = zoo
         self._metricas = metricas
@@ -181,6 +221,13 @@ class BacktestEngine:
         self._benchmark = benchmark.sort_index()
         self._ventana = ventana_metricas
         self._metrica_ranking = metrica_ranking
+
+        self._risk_overlay = risk_overlay
+        self._position_sizer = position_sizer
+        self._cap_bruto_exposicion = cap_bruto_exposicion
+        self._tp_rule = tp_rule
+        self._datos_ohlc = datos_ohlc or {}
+        self._atr_window = atr_window
 
         cfg = kalman_config or {}
         self._kalman = KalmanSignalFilter(
@@ -235,6 +282,9 @@ class BacktestEngine:
             f"ventana={self._ventana} | metrica='{self._metrica_ranking}'"
         )
 
+        if self._risk_overlay is not None:
+            self._risk_overlay.reset()
+
         # ── 2. Inicialización ─────────────────────────────────────────────────
 
         # Pesos de portafolio vigentes (ticker-level) para el siguiente período
@@ -275,7 +325,7 @@ class BacktestEngine:
             )
 
             for nombre in nombres:
-                ret_periodo = self._retornos_periodo(
+                ret_periodo = self._retornos_periodo_efectivo(
                     pesos=pesos_vigentes[nombre],
                     fecha_desde=fecha_desde,
                     fecha_hasta=fecha_corte,
@@ -290,6 +340,7 @@ class BacktestEngine:
             if n_obs >= self._ventana + 5:
 
                 metricas_periodo_raw: Dict[str, MetricasResultado] = {}
+                ret_ventana_reciente: Dict[str, pd.Series] = {}
 
                 # Calcular métrica rodante para cada estrategia
                 for nombre in nombres:
@@ -301,6 +352,8 @@ class BacktestEngine:
                         hist_rolling[nombre].append((fecha_corte, np.nan))
                         metricas_periodo_raw[nombre] = MetricasResultado()
                         continue
+
+                    ret_ventana_reciente[nombre] = ret_al.iloc[-self._ventana:]
 
                     # Último valor de la ventana rodante = señal actual (ruidosa)
                     try:
@@ -366,13 +419,22 @@ class BacktestEngine:
                         metricas_para_ttt, tiempo_dias, self._metrica_ranking
                     )
                     self._juez.actualizar()
-                    pesos_juez_actuales = self._juez.pesos_asignacion()
 
-                    top_nombre = max(pesos_juez_actuales, key=pesos_juez_actuales.get)
-                    logger.info(
-                        f"[{fecha_corte.date()}] TTT actualizado | "
-                        f"top={top_nombre} ({pesos_juez_actuales[top_nombre]:.1%})"
+                    if self._position_sizer is not None:
+                        pesos_juez_actuales = self._pesos_via_sizer(
+                            self._position_sizer, nombres, ret_ventana_reciente
+                        )
+                    else:
+                        pesos_juez_actuales = self._juez.pesos_asignacion()
+
+                    top_nombre = max(
+                        pesos_juez_actuales, key=lambda k: pesos_juez_actuales[k], default=None
                     )
+                    if top_nombre is not None:
+                        logger.info(
+                            f"[{fecha_corte.date()}] TTT actualizado | "
+                            f"top={top_nombre} ({pesos_juez_actuales[top_nombre]:.1%})"
+                        )
                 except Exception as exc:
                     logger.warning(
                         f"[{fecha_corte.date()}] TTTJuez.actualizar() falló: {exc}. "
@@ -386,6 +448,15 @@ class BacktestEngine:
             #        CAUSAL: datos filtrados hasta fecha_corte inclusive.
             nuevas_señales = self._zoo.generar_señales_todas(self._datos, fecha_corte)
             for nombre, pesos in nuevas_señales.items():
+                if self._risk_overlay is not None:
+                    pesos = self._escalar_por_riesgo(
+                        risk_overlay=self._risk_overlay,
+                        nombre=nombre,
+                        pesos=pesos,
+                        lista_ret_estrategia=listas_ret[nombre],
+                        fecha_desde=fecha_desde,
+                        fecha_hasta=fecha_corte,
+                    )
                 pesos_vigentes[nombre] = pesos
                 pesos_port_snapshots[nombre][fecha_corte] = pesos
 
@@ -471,6 +542,145 @@ class BacktestEngine:
         # Dot product vectorizado: retorno_portafolio[t] = pesos · retornos[t]
         pesos_validos = pesos[activos]
         return (retornos_activos * pesos_validos).sum(axis=1)
+
+    def _retornos_periodo_efectivo(
+        self,
+        pesos: pd.Series,
+        fecha_desde: pd.Timestamp,
+        fecha_hasta: pd.Timestamp,
+    ) -> pd.Series:
+        """
+        Despacha entre el cálculo vectorizado estándar (`_retornos_periodo`)
+        y la variante path-dependent con Take-Profit por ATR
+        (`retornos_periodo_con_riesgo`), según si `self._tp_rule` está
+        configurado. Sin `tp_rule`, es exactamente `_retornos_periodo`
+        (no-regresión).
+        """
+        if self._tp_rule is None or not self._datos_ohlc:
+            return self._retornos_periodo(pesos, fecha_desde, fecha_hasta)
+
+        atr_pct = self._atr_pct_activos(pesos, fecha_desde)
+        return retornos_periodo_con_riesgo(
+            pesos=pesos,
+            datos=self._datos,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            atr_pct=atr_pct,
+            tp_rule=self._tp_rule,
+        )
+
+    def _atr_pct_activos(
+        self,
+        pesos: pd.Series,
+        fecha_desde: pd.Timestamp,
+    ) -> Dict[str, float]:
+        """ATR%(fecha_desde) causal por activo, para los tickers con OHLC disponible."""
+        return {
+            ticker: calcular_atr_pct(self._datos_ohlc[ticker], fecha_desde, self._atr_window)
+            for ticker in pesos.index
+            if ticker in self._datos_ohlc
+        }
+
+    def _escalar_por_riesgo(
+        self,
+        risk_overlay: RiskOverlay,
+        nombre: str,
+        pesos: pd.Series,
+        lista_ret_estrategia: List[Tuple[pd.Timestamp, float]],
+        fecha_desde: pd.Timestamp,
+        fecha_hasta: pd.Timestamp,
+    ) -> pd.Series:
+        """
+        Escala los pesos ticker-level recién generados por el factor de
+        `RiskOverlay` derivado del track record PROPIO de la estrategia en
+        el fold recién cerrado (fecha_desde, fecha_hasta] — causal: solo usa
+        retornos ya realizados al momento de fecha_hasta.
+
+        `RiskOverlay` mantiene estado persistente por `strategy_name` entre
+        llamadas sucesivas (un fold por rebalanceo), acumulando equity y HWM
+        globales a través de todo el walk-forward.
+
+        La volatilidad realizada se calcula sobre la serie COMPLETA acumulada
+        (no solo el fold): un fold de ~21 días no tiene lookback suficiente
+        para su propia ventana rodante, así que se precomputa con historial
+        completo y se recorta al fold vía `market_data[vol_col]` — evita que
+        `RiskOverlay._annualized_vol` recaiga en su fallback fold-local (que
+        produciría NaN casi todo el fold y anularía la exposición).
+        """
+        if not lista_ret_estrategia:
+            return pesos
+
+        serie = self._serie_desde_lista(lista_ret_estrategia)
+        fold = serie[(serie.index > fecha_desde) & (serie.index <= fecha_hasta)]
+        if fold.empty:
+            return pesos
+
+        vol_completa = serie.rolling(
+            risk_overlay.vol_window, min_periods=risk_overlay.min_periods
+        ).std() * np.sqrt(252)
+
+        base_weight = pd.Series(1.0, index=fold.index)
+        market_data = pd.DataFrame({risk_overlay.vol_col: vol_completa.reindex(fold.index)})
+        escalado = risk_overlay.compute_risk_weight(
+            base_weight, fold, market_data, strategy_name=nombre
+        )
+        factor = float(escalado.iloc[-1]) if not escalado.empty and np.isfinite(escalado.iloc[-1]) else 1.0
+        return pesos * factor
+
+    def _pesos_via_sizer(
+        self,
+        position_sizer: AbstractPositionSizer,
+        nombres: List[str],
+        ret_ventana_reciente: Dict[str, pd.Series],
+    ) -> Dict[str, float]:
+        """
+        Sustituye `TTTJuez.pesos_asignacion()` (pesos que suman 1) por
+        exposición absoluta calculada con `self._position_sizer` (ej.
+        `KellyBayesianSizer`): μ_edge y σ_retornos se estiman empíricamente
+        de la ventana reciente de retornos realizados de cada estrategia;
+        σ_skill viene del posterior TTT (`habilidades_latentes()`).
+
+        Renormaliza contra `self._cap_bruto_exposicion` si la suma cruda la
+        excede — cota de seguridad válida para cualquier sizer, no solo Kelly.
+        """
+        habilidades = self._juez.habilidades_latentes()
+
+        crudo: Dict[str, float] = {}
+        for nombre in nombres:
+            ret_reciente = ret_ventana_reciente.get(nombre)
+            if ret_reciente is None or ret_reciente.empty:
+                crudo[nombre] = 0.0
+                continue
+
+            mu_edge = float(ret_reciente.mean())
+            sigma_retornos = float(ret_reciente.std())
+            _, sigma_skill = habilidades.get(nombre, (0.0, self._juez_sigma_prior()))
+
+            try:
+                crudo[nombre] = position_sizer.exposicion(
+                    mu_edge=mu_edge,
+                    sigma_retornos=sigma_retornos,
+                    sigma_skill=sigma_skill,
+                )
+            except SizingError:
+                crudo[nombre] = 0.0
+
+        bruto = sum(crudo.values())
+        if bruto > self._cap_bruto_exposicion:
+            factor = self._cap_bruto_exposicion / bruto
+            crudo = {k: v * factor for k, v in crudo.items()}
+
+        return crudo
+
+    @staticmethod
+    def _juez_sigma_prior() -> float:
+        """
+        σ_skill de respaldo para una estrategia sin entrada en
+        `habilidades_latentes()` (aún no compitió). Un valor alto penaliza
+        fuertemente vía el denominador de Kelly — coherente con "sin
+        convicción, sin exposición" (ver H4 en el plan de diseño).
+        """
+        return 10.0
 
     @staticmethod
     def _serie_desde_lista(
@@ -620,8 +830,8 @@ class BacktestEngine:
             metrica_usada=self._metrica_ranking,
         )
 
-    @staticmethod
     def _ensamblar_meta(
+        self,
         retornos_estrategias: pd.DataFrame,
         pesos_juez_snapshots: List[Tuple[pd.Timestamp, Dict[str, float]]],
     ) -> pd.Series:
@@ -635,6 +845,14 @@ class BacktestEngine:
         Si un rebalanceo no generó actualización TTT (warm-up), se usan los
         pesos equal-weight que estaban vigentes en ese momento.
 
+        Renormalización: `TTTJuez.pesos_asignacion()` garantiza suma=1, así
+        que si faltan columnas (estrategia sin retorno ese día) se renormaliza
+        para no perder exposición por una ausencia accidental. Con
+        `self._position_sizer` activo (ej. KellyBayesianSizer) los pesos son
+        EXPOSICIÓN ABSOLUTA por diseño (pueden sumar < 1 a propósito — ver
+        H4/§1.2): renormalizar aquí destruiría exactamente la propiedad que
+        el sizer implementa, así que se omite.
+
         Args:
             retornos_estrategias: DataFrame [fecha x estrategia].
             pesos_juez_snapshots: [(fecha_rebalanceo, {estrategia: peso}), ...]
@@ -645,6 +863,8 @@ class BacktestEngine:
         """
         if not pesos_juez_snapshots or retornos_estrategias.empty:
             return pd.Series(dtype=float)
+
+        renormalizar = self._position_sizer is None
 
         salida = pd.Series(np.nan, index=retornos_estrategias.index, dtype=float)
         n = len(pesos_juez_snapshots)
@@ -672,7 +892,7 @@ class BacktestEngine:
 
             pesos_s = pd.Series({c: pesos_dict[c] for c in cols})
             total = pesos_s.sum()
-            if total > 1e-10:
+            if renormalizar and total > 1e-10:
                 pesos_s = pesos_s / total  # renormalizar si hay estrategias ausentes
 
             # Dot product vectorizado: retorno_meta[t] = sum_i(w_i * r_i[t])
