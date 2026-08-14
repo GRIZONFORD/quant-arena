@@ -27,19 +27,45 @@ DOS MECANISMOS (vectorizados dentro del fold; estado persistente entre folds):
 
        hwm_global(t) = max( hwm_previo,  max_{s≤t} equity_tv(s) )
        drawdown(t)   = equity_tv(t) / hwm_global(t) − 1
-       participa(t)  = drawdown(t) > −dd_limit        # en mercado si dentro del límite
+       participa(t)  = drawdown(t) > −dd_limit(t)     # en mercado si dentro del límite
        gate          = participa.shift(1)             # anti look-ahead
 
    La exposición se corta a 0 mientras el drawdown desde el pico GLOBAL supere
    −dd_limit, y se re-activa cuando el equity vol-targeted recupera ese umbral.
 
+   ⚙ EXTENSIONES OPCIONALES (default = comportamiento V2.1 sin cambios):
+
+   a) dd_limit DINÁMICO (`dynamic_dd=True`): en vez de un umbral fijo, se
+      escala con la volatilidad realizada del propio equity vol-targeted,
+      acotado a [dd_min, dd_max]:
+
+          dd_limit(t) = clip( dd_k · vol_ann_equity(t−1),  dd_min,  dd_max )
+
+      En régimen tranquilo el stop corta antes (umbral bajo); en crisis con
+      vol alta ya esperada, no se auto-liquida por ruido dentro del rango
+      normal de esa volatilidad.
+
+   b) DE-RISKING GRADUAL (`gradual_derisking=True`): reemplaza el gate 0/1
+      binario por una rampa continua que evita el efecto "todo o nada"
+      (re-entradas y salidas abruptas / whipsaw):
+
+          dd_frac(t) = max(−drawdown(t), 0)
+          factor(t)  = clip( 1 − (dd_frac(t) / dd_limit(t))^p,  0,  1 )
+
+      factor=1 sin drawdown, decae suavemente hasta factor=0 en dd_limit,
+      con `derisk_power` (p) controlando la convexidad de la rampa.
+
 ANTI LOOK-AHEAD:
    · Target Vol usa `.shift(1)` (vol de t−1 escala la posición de t).
-   · El gate del stop usa `.shift(1)` (drawdown observado en t corta desde t+1).
+   · dd_limit dinámico usa `.shift(1)` (vol de t−1 define el umbral de t).
+   · El gate/factor del stop usa `.shift(1)` (drawdown observado en t corta
+     desde t+1).
    · El estado (equity/HWM previos) proviene EXCLUSIVAMENTE de folds anteriores
      (OOS pasado), nunca del futuro.
 
-ESTADO: `_state[strategy_name] = (equity_tv, hwm_global, in_market)`.
+ESTADO: `_state[strategy_name] = (equity_tv, hwm_global, ultimo_factor)`.
+   · `ultimo_factor` generaliza el antiguo `in_market: bool` a un float en
+     [0, 1] — con `gradual_derisking=False` sigue siendo 0.0/1.0 exacto.
    · Se actualiza al final de cada fold y se consume al inicio del siguiente.
    · `reset()` lo limpia → cada torneo nuevo parte de equity=1.0, HWM=1.0
      (evita contaminación entre ejecuciones independientes).
@@ -61,34 +87,71 @@ class RiskOverlay:
     Overlay de riesgo STATEFUL aplicable al vector de pesos de cualquier estrategia.
 
     Args:
-        target_vol:   Volatilidad anualizada objetivo (default 0.15 = 15%).
-        max_leverage: Cap de exposición (DEFAULT 1.0 = sin apalancamiento).
-        vol_window:   Ventana de vol realizada si hay que calcularla al vuelo.
-        vol_col:      Columna de vol anualizada preexistente en market_data.
-        enable_stop:  Activa el trailing stop-loss global por drawdown.
-        dd_limit:     Umbral de drawdown (desde el HWM GLOBAL) que corta a efectivo.
-        min_periods:  Mínimo de obs para la vol al vuelo.
+        target_vol:        Volatilidad anualizada objetivo (default 0.15 = 15%).
+        max_leverage:      Cap de exposición (DEFAULT 1.0 = sin apalancamiento).
+        vol_window:        Ventana de vol realizada si hay que calcularla al vuelo.
+        vol_col:           Columna de vol anualizada preexistente en market_data.
+        enable_stop:       Activa el trailing stop-loss global por drawdown.
+        dd_limit:          Umbral de drawdown (desde el HWM GLOBAL) que corta a
+                            efectivo. Con `dynamic_dd=False` (default) es fijo;
+                            con `dynamic_dd=True` actúa como valor de referencia
+                            hasta que hay suficiente historial de vol del equity.
+        min_periods:       Mínimo de obs para la vol al vuelo.
+        dynamic_dd:        Si True, escala dd_limit con la vol realizada del
+                            equity vol-targeted en vez de usar un umbral fijo
+                            (default False = comportamiento V2.1 sin cambios).
+        dd_k:               Multiplicador de la vol anualizada del equity para
+                            el dd_limit dinámico.
+        dd_min:             Cota inferior del dd_limit dinámico.
+        dd_max:             Cota superior del dd_limit dinámico.
+        dd_vol_window:      Ventana rolling para la vol del equity vol-targeted
+                            usada en el dd_limit dinámico.
+        gradual_derisking:  Si True, reemplaza el gate binario 0/1 por una
+                            rampa continua de exposición (default False =
+                            comportamiento V2.1 sin cambios).
+        derisk_power:       Exponente `p` de la rampa de de-risking gradual.
     """
 
     def __init__(
         self,
-        target_vol:   float = 0.15,
-        max_leverage: float = 1.0,
-        vol_window:   int   = 21,
-        vol_col:      str   = "realized_vol",
-        enable_stop:  bool  = True,
-        dd_limit:     float = 0.15,
-        min_periods:  int   = 10,
+        target_vol:        float = 0.15,
+        max_leverage:      float = 1.0,
+        vol_window:        int   = 21,
+        vol_col:           str   = "realized_vol",
+        enable_stop:       bool  = True,
+        dd_limit:          float = 0.15,
+        min_periods:       int   = 10,
+        dynamic_dd:        bool  = False,
+        dd_k:              float = 2.0,
+        dd_min:            float = 0.05,
+        dd_max:            float = 0.30,
+        dd_vol_window:     int   = 21,
+        gradual_derisking: bool  = False,
+        derisk_power:      float = 2.0,
     ) -> None:
-        self.target_vol   = target_vol
-        self.max_leverage = max_leverage
-        self.vol_window   = vol_window
-        self.vol_col      = vol_col
-        self.enable_stop  = enable_stop
-        self.dd_limit     = dd_limit
-        self.min_periods  = min_periods
-        # Estado global persistente por estrategia: (equity_tv, hwm_global, in_market)
-        self._state: Dict[str, Tuple[float, float, bool]] = {}
+        if dd_limit <= 0.0:
+            raise ValueError(f"dd_limit={dd_limit} debe ser > 0.")
+        if dynamic_dd and not (0.0 < dd_min <= dd_max):
+            raise ValueError(f"dd_min={dd_min}, dd_max={dd_max}: se requiere 0 < dd_min <= dd_max.")
+        if derisk_power <= 0.0:
+            raise ValueError(f"derisk_power={derisk_power} debe ser > 0.")
+
+        self.target_vol        = target_vol
+        self.max_leverage      = max_leverage
+        self.vol_window        = vol_window
+        self.vol_col           = vol_col
+        self.enable_stop       = enable_stop
+        self.dd_limit          = dd_limit
+        self.min_periods       = min_periods
+        self.dynamic_dd        = dynamic_dd
+        self.dd_k              = dd_k
+        self.dd_min            = dd_min
+        self.dd_max            = dd_max
+        self.dd_vol_window     = dd_vol_window
+        self.gradual_derisking = gradual_derisking
+        self.derisk_power      = derisk_power
+        # Estado global persistente por estrategia: (equity_tv, hwm_global, ultimo_factor)
+        self._state: Dict[str, Tuple[float, float, float]] = {}
 
     # ──────────────────────────────────────────────────────────────────────────
     def reset(self) -> None:
@@ -138,8 +201,8 @@ class RiskOverlay:
 
         # ── 2. Trailing Stop GLOBAL Y PERSISTENTE ───────────────────────────
         # Estado heredado de folds OOS anteriores (1.0 si es el primer fold).
-        prior_eq, prior_hwm, prior_in = self._state.get(
-            strategy_name, (1.0, 1.0, True)
+        prior_eq, prior_hwm, prior_factor = self._state.get(
+            strategy_name, (1.0, 1.0, 1.0)
         )
 
         # Equity vol-targeted acumulado DESDE el estado previo (no reinicia a 1.0).
@@ -150,24 +213,47 @@ class RiskOverlay:
         hwm = equity_tv.cummax().clip(lower=prior_hwm)
         drawdown = equity_tv / hwm - 1.0
 
-        # Participa si el drawdown desde el pico GLOBAL no excede −dd_limit.
-        participate = drawdown > -self.dd_limit
-        gate = participate.shift(1)
-        # El día 0 del fold hereda el estado de participación del fold anterior.
-        gate.iloc[0] = prior_in
-        gate = gate.fillna(prior_in).astype(float)
+        # ── dd_limit: fijo (default) o dinámico según vol del equity ────────
+        if self.dynamic_dd:
+            ret_equity = equity_tv.pct_change().fillna(0.0)
+            vol_equity = ret_equity.rolling(
+                self.dd_vol_window, min_periods=self.min_periods
+            ).std() * np.sqrt(252)
+            dd_limit_serie = (self.dd_k * vol_equity.shift(1)).clip(
+                lower=self.dd_min, upper=self.dd_max
+            ).fillna(self.dd_limit)
+        else:
+            dd_limit_serie = pd.Series(self.dd_limit, index=equity_tv.index)
+
+        # ── Participación: gate binario (default) o rampa gradual ───────────
+        if self.gradual_derisking:
+            dd_frac = (-drawdown).clip(lower=0.0)
+            factor_crudo = 1.0 - (dd_frac / dd_limit_serie) ** self.derisk_power
+            factor_crudo = factor_crudo.clip(lower=0.0, upper=1.0)
+        else:
+            factor_crudo = (drawdown > -dd_limit_serie).astype(float)
+
+        factor = factor_crudo.shift(1)
+        # El día 0 del fold hereda el factor de participación del fold anterior.
+        factor.iloc[0] = prior_factor
+        factor = factor.fillna(prior_factor)
 
         # ── Persistir estado para el siguiente fold ─────────────────────────
         self._state[strategy_name] = (
             float(equity_tv.iloc[-1]),
             float(hwm.iloc[-1]),
-            bool(participate.iloc[-1]),
+            float(factor_crudo.iloc[-1]),
         )
 
-        return w_tv * gate
+        return w_tv * factor
 
     def describe(self) -> str:
         s = f"TargetVol={self.target_vol:.0%} | cap={self.max_leverage:.1f}x"
         if self.enable_stop:
-            s += f" | TrailingStop GLOBAL@−{self.dd_limit:.0%}"
+            if self.dynamic_dd:
+                s += f" | TrailingStop DINÁMICO@[{self.dd_min:.0%},{self.dd_max:.0%}] (k={self.dd_k})"
+            else:
+                s += f" | TrailingStop GLOBAL@−{self.dd_limit:.0%}"
+            if self.gradual_derisking:
+                s += f" | de-risking gradual (p={self.derisk_power})"
         return s
