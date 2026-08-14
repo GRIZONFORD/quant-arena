@@ -23,9 +23,10 @@ Registro: 'hmm_garch'
 """
 from __future__ import annotations
 
+import logging
 import sys, warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,7 +48,12 @@ except ImportError:
     _ARCH_OK = False
 
 from quant_arena.core.abstracciones import AbstractStrategy
+from quant_arena.core.excepciones import ConfiguracionInvalidaError, SupuestoEstadisticoError
+from quant_arena.diagnostics.assumption_validator import AssumptionReport, AssumptionValidator
+from quant_arena.diagnostics.model_selection import ReporteSeleccionK, seleccionar_k_hmm
 from quant_arena.zoo.base_estrategia import RegistroZoo
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -83,6 +89,11 @@ class RegimeDetector:
         self._orden_estados: Optional[np.ndarray] = None  # mapeo al orden semantico
         self._n_iter = n_iter
         self._rng    = random_state
+        self.convergio: Optional[bool] = None  # diagnóstico real de Baum-Welch (H9)
+
+    @property
+    def n_regimenes(self) -> int:
+        return self._n_regimenes
 
     def fit(self, log_rets: np.ndarray) -> "RegimeDetector":
         """
@@ -96,7 +107,7 @@ class RegimeDetector:
         """
         X = log_rets.reshape(-1, 1)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter("ignore")  # solo el texto de consola de hmmlearn
             self._hmm = GaussianHMM(
                 n_components = self._n_regimenes,
                 covariance_type = "full",
@@ -105,6 +116,16 @@ class RegimeDetector:
                 tol = 1e-4,
             )
             self._hmm.fit(X)
+
+        # Diagnóstico REAL de convergencia (H9): se lee monitor_.converged en
+        # vez de solo suprimir el warning de consola sin verificar la señal.
+        self.convergio = bool(self._hmm.monitor_.converged)
+        if not self.convergio:
+            logger.warning(
+                f"RegimeDetector: Baum-Welch no convergió (K={self._n_regimenes}, "
+                f"n_iter={self._n_iter}). Los parámetros por régimen pueden no "
+                "estar bien identificados."
+            )
 
         # Ordenar estados por media de retorno (bearish->bullish)
         medias           = self._hmm.means_.flatten()
@@ -129,6 +150,24 @@ class RegimeDetector:
         # Mapear al orden semantico
         pos_en_orden    = np.where(self._orden_estados == ultimo_raw)[0]
         return int(pos_en_orden[0]) if len(pos_en_orden) > 0 else 1
+
+    def predict_proba_regimen(self, log_rets: np.ndarray) -> np.ndarray:
+        """
+        Distribución posterior P(régimen | datos) del último período, en
+        orden SEMÁNTICO (índice 0 = bearish, ... índice max = bullish).
+
+        Base para exponer la incertidumbre de régimen a componentes externos
+        (ej. el denominador de Kelly en §1.2, o un dd_limit condicionado a
+        P(crisis) en §1.1) sin acoplar el motor a los internals de hmmlearn.
+
+        Returns:
+            array (n_regimenes,) que suma 1.0.
+        """
+        if self._hmm is None or self._orden_estados is None:
+            raise RuntimeError("HMM no ajustado. Llama a fit() primero.")
+        X = log_rets.reshape(-1, 1)
+        posterior_raw = self._hmm.predict_proba(X)[-1]  # orden interno de hmmlearn
+        return posterior_raw[self._orden_estados]  # remapeado a orden semántico
 
     def get_params_regimen(self, regimen: int) -> Tuple[float, float]:
         """
@@ -254,11 +293,24 @@ class HMMGARCHStrategy(AbstractStrategy):
     Args:
         universo:             Tickers (un elemento).
         min_train_days:       Minimo de dias para ajustar HMM y GARCH.
-        n_regimenes:          Numero de estados HMM.
+        n_regimenes:          Numero de estados HMM (fijo, salvo que
+                              `seleccionar_k_automaticamente=True`).
         umbral_zscore:        Umbral del z-score condicional para señal.
         retrain_every_n_days: Dias entre re-ajustes.
         close_col:            Columna de cierre.
         seed:                 Semilla.
+        seleccionar_k_automaticamente: Si True, en cada re-ajuste se
+                              selecciona K por BIC (`diagnostics.model_selection`)
+                              en vez de usar `n_regimenes` fijo (H9). Default
+                              False — comportamiento idéntico al original.
+        k_range:              Rango de K a evaluar cuando la selección
+                              automática está activa.
+        validar_normalidad:   Si True, contrasta normalidad de los
+                              log-retornos (`diagnostics.assumption_validator`)
+                              en cada re-ajuste y usa GARCH dist='t' si se
+                              rechaza, en vez de 'normal' fijo (H9). Default
+                              False — comportamiento idéntico al original.
+        alfa_supuestos:       Nivel de significancia para `validar_normalidad`.
     """
 
     def __init__(
@@ -270,6 +322,10 @@ class HMMGARCHStrategy(AbstractStrategy):
         retrain_every_n_days: int   = 21,
         close_col:            str   = "Close",
         seed:                 int   = 42,
+        seleccionar_k_automaticamente: bool = False,
+        k_range:              Sequence[int] = range(2, 7),
+        validar_normalidad:   bool = False,
+        alfa_supuestos:       float = 0.05,
     ) -> None:
         if not _HMM_OK:
             raise ImportError("pip install hmmlearn")
@@ -285,9 +341,18 @@ class HMMGARCHStrategy(AbstractStrategy):
         self._close_col    = close_col
         self._seed         = seed
 
+        self._seleccionar_k    = seleccionar_k_automaticamente
+        self._k_range          = k_range
+        self._validar_normalidad = validar_normalidad
+        self._alfa_supuestos   = alfa_supuestos
+
         self._detector: Optional[RegimeDetector] = None
         self._garch:    Optional[GARCHModeler]   = None
         self._ultimo_entrenamiento: Optional[pd.Timestamp] = None
+
+        # Diagnósticos del último re-ajuste (introspección para reportes/tests)
+        self._ultimo_reporte_seleccion_k: Optional[ReporteSeleccionK] = None
+        self._ultimo_reporte_normalidad:  Optional[AssumptionReport] = None
 
     @property
     def descripcion(self) -> str:
@@ -296,23 +361,110 @@ class HMMGARCHStrategy(AbstractStrategy):
             f"| umbral_z=+-{self._umbral:.2f} | retrain={self._retrain_days}d"
         )
 
+    @property
+    def ultimo_reporte_seleccion_k(self) -> Optional[ReporteSeleccionK]:
+        """Reporte de `seleccionar_k_hmm` del último re-ajuste (None si desactivado)."""
+        return self._ultimo_reporte_seleccion_k
+
+    @property
+    def ultimo_reporte_normalidad(self) -> Optional[AssumptionReport]:
+        """Reporte de `test_normalidad` del último re-ajuste (None si desactivado)."""
+        return self._ultimo_reporte_normalidad
+
     # ------------------------------------------------------------------
     def _ajustar(self, log_rets: np.ndarray) -> None:
         """Ajusta HMM y GARCH sobre la serie de log-retornos."""
         np.random.seed(self._seed)
 
+        n_regimenes_usar = self._n_regimenes
+        if self._seleccionar_k:
+            try:
+                reporte_k = seleccionar_k_hmm(
+                    log_rets, k_range=self._k_range, random_state=self._seed
+                )
+                n_regimenes_usar = reporte_k.k_optimo_bic
+                self._ultimo_reporte_seleccion_k = reporte_k
+            except (ConfiguracionInvalidaError, SupuestoEstadisticoError) as exc:
+                logger.warning(
+                    f"HMMGARCHStrategy: selección de K falló ({exc}); "
+                    f"usando n_regimenes={self._n_regimenes} fijo."
+                )
+                self._ultimo_reporte_seleccion_k = None
+
         # Ajustar HMM
         self._detector = RegimeDetector(
-            n_regimenes  = self._n_regimenes,
+            n_regimenes  = n_regimenes_usar,
             n_iter       = 100,
             random_state = self._seed,
         )
         self._detector.fit(log_rets)
 
         # Obtener retornos segmentados por regimen y ajustar GARCH
-        rets_por_reg  = self._detector.get_retornos_por_regimen(log_rets)
-        self._garch   = GARCHModeler(dist="normal")
+        rets_por_reg = self._detector.get_retornos_por_regimen(log_rets)
+
+        dist_garch = "normal"
+        if self._validar_normalidad:
+            try:
+                validador = AssumptionValidator(alfa=self._alfa_supuestos)
+                reporte_norm = validador.test_normalidad(log_rets)
+                self._ultimo_reporte_normalidad = reporte_norm
+                dist_garch = "t" if reporte_norm.rechaza_h0 else "normal"
+            except (ImportError, SupuestoEstadisticoError) as exc:
+                logger.warning(
+                    f"HMMGARCHStrategy: test de normalidad falló ({exc}); "
+                    "usando GARCH dist='normal'."
+                )
+                self._ultimo_reporte_normalidad = None
+
+        self._garch = GARCHModeler(dist=dist_garch)
         self._garch.fit(rets_por_reg)
+
+    # ------------------------------------------------------------------
+    # Incertidumbre de régimen — punto de extensión opcional para §1.1/§1.2
+    # ------------------------------------------------------------------
+
+    def incertidumbre_regimen(self, log_rets: np.ndarray) -> float:
+        """
+        1 − max(P(régimen | datos)): alta cuando el HMM no tiene claridad
+        sobre en qué régimen está el mercado ahora mismo.
+
+        Diseñado para ser consumido, vía duck-typing, por
+        `BacktestEngine._pesos_via_sizer` (§1.2): si la estrategia expone
+        este método, su valor puede sumarse a σ_skill_TTT en el
+        denominador de Kelly — menos claridad de régimen, menor exposición.
+        No forma parte de `AbstractStrategy` (no todas las estrategias
+        tienen noción de "régimen"; forzarlo violaría ISP).
+
+        Returns:
+            float en [0, 1 − 1/n_regimenes]. 0.0 si el detector no está
+            ajustado (sin información, sin penalización adicional).
+        """
+        if self._detector is None:
+            return 0.0
+        try:
+            posterior = self._detector.predict_proba_regimen(log_rets)
+            return float(1.0 - posterior.max())
+        except Exception:
+            return 0.0
+
+    def probabilidad_crisis(self, log_rets: np.ndarray) -> float:
+        """
+        P(régimen bearish | datos) — el régimen semántico 0 (menor μ).
+
+        Punto de extensión opcional para §1.1: un `RiskOverlay` externo
+        podría condicionar `dd_limit` a esta probabilidad (más bajo con
+        P(crisis) alta) en vez de escalar solo por volatilidad realizada.
+
+        Returns:
+            float en [0, 1]. 0.0 si el detector no está ajustado.
+        """
+        if self._detector is None:
+            return 0.0
+        try:
+            posterior = self._detector.predict_proba_regimen(log_rets)
+            return float(posterior[0])
+        except Exception:
+            return 0.0
 
     def _generar_prediccion(self, log_rets: np.ndarray) -> float:
         """
