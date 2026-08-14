@@ -263,3 +263,69 @@ def test_tp_rule_intra_periodo_cambia_retornos_estrategia():
     con_tp = _correr(TakeProfitATRRule(tp_mult=1.0, recorte=0.5), {TICKER: ohlc})
 
     assert not sin_tp.retornos_estrategias["full"].equals(con_tp.retornos_estrategias["full"])
+
+
+# ---------------------------------------------------------------------------
+# Hook opcional §1.5: incertidumbre_regimen -> sigma_skill de Kelly
+# ---------------------------------------------------------------------------
+
+class _EstrategiaConIncertidumbreRegimen(_EstrategiaFija):
+    """Estrategia sintética que expone `incertidumbre_regimen`, imitando el
+    duck-typing hook que HMMGARCHStrategy implementa en §1.5."""
+
+    def __init__(self, nombre: str, universo: List[str], peso: float, incertidumbre: float) -> None:
+        super().__init__(nombre=nombre, universo=universo, peso=peso)
+        self._incertidumbre = incertidumbre
+
+    def incertidumbre_regimen(self, log_rets) -> float:
+        return self._incertidumbre
+
+
+def test_incertidumbre_regimen_hook_reduce_exposicion_kelly():
+    """
+    Motor._pesos_via_sizer debe sumar incertidumbre_regimen() (si la
+    estrategia la expone) a sigma_skill_TTT antes de pasarla a Kelly. Con
+    incertidumbre alta, la exposición de esa estrategia debe caer por
+    debajo de la de una estrategia idéntica sin el hook.
+    """
+    datos, benchmark = _datos_con_crash(n=300)
+
+    def _zoo_con_hook():
+        zoo = ZooManager()
+        zoo.agregar(_EstrategiaFija("sin_hook", universo=[TICKER], peso=1.0))
+        zoo.agregar(_EstrategiaConIncertidumbreRegimen(
+            "con_hook_incierto", universo=[TICKER], peso=1.0, incertidumbre=50.0
+        ))
+        return zoo
+
+    juez = TTTJuez()
+    metricas = PerformanceMetrics(tasa_libre_riesgo_anual=0.02)
+    sizer = KellyBayesianSizer(lam=0.5, kappa_skill=1.0, cap_individual=1.0, cap_bruto=10.0)
+    engine = BacktestEngine(
+        zoo=_zoo_con_hook(), metricas=metricas, juez=juez, datos=datos, benchmark=benchmark,
+        position_sizer=sizer,
+    )
+    resultado = engine.ejecutar_walk_forward(
+        fecha_inicio=datos.index[0], fecha_fin=datos.index[-1], frecuencia_rebalanceo=21,
+    )
+
+    assert not resultado.pesos_juez.empty
+    # La estrategia con alta incertidumbre de régimen debe recibir, en
+    # promedio, exposición estrictamente menor que la que no expone el hook.
+    media_sin_hook = resultado.pesos_juez["sin_hook"].mean()
+    media_con_hook = resultado.pesos_juez["con_hook_incierto"].mean()
+    assert media_con_hook < media_sin_hook
+
+
+def test_incertidumbre_regimen_hook_ausente_no_afecta_default():
+    """Estrategias sin el método (mayoría del Zoo) no deben verse afectadas
+    — _incertidumbre_regimen_extra debe devolver 0.0 silenciosamente."""
+    datos, benchmark = _datos_con_crash(n=300)
+    zoo = _zoo_dos_estrategias(datos)
+    juez = TTTJuez()
+    metricas = PerformanceMetrics(tasa_libre_riesgo_anual=0.02)
+    engine = BacktestEngine(
+        zoo=zoo, metricas=metricas, juez=juez, datos=datos, benchmark=benchmark,
+    )
+    extra = engine._incertidumbre_regimen_extra("full", datos.index[100])
+    assert extra == 0.0

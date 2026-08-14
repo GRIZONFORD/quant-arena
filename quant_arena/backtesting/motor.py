@@ -422,7 +422,7 @@ class BacktestEngine:
 
                     if self._position_sizer is not None:
                         pesos_juez_actuales = self._pesos_via_sizer(
-                            self._position_sizer, nombres, ret_ventana_reciente
+                            self._position_sizer, nombres, ret_ventana_reciente, fecha_corte
                         )
                     else:
                         pesos_juez_actuales = self._juez.pesos_asignacion()
@@ -632,13 +632,16 @@ class BacktestEngine:
         position_sizer: AbstractPositionSizer,
         nombres: List[str],
         ret_ventana_reciente: Dict[str, pd.Series],
+        fecha_corte: pd.Timestamp,
     ) -> Dict[str, float]:
         """
         Sustituye `TTTJuez.pesos_asignacion()` (pesos que suman 1) por
         exposición absoluta calculada con `self._position_sizer` (ej.
         `KellyBayesianSizer`): μ_edge y σ_retornos se estiman empíricamente
         de la ventana reciente de retornos realizados de cada estrategia;
-        σ_skill viene del posterior TTT (`habilidades_latentes()`).
+        σ_skill viene del posterior TTT (`habilidades_latentes()`), sumada
+        opcionalmente a la incertidumbre de régimen de la propia estrategia
+        (§1.5 — ver `_incertidumbre_regimen_extra`).
 
         Renormaliza contra `self._cap_bruto_exposicion` si la suma cruda la
         excede — cota de seguridad válida para cualquier sizer, no solo Kelly.
@@ -654,7 +657,8 @@ class BacktestEngine:
 
             mu_edge = float(ret_reciente.mean())
             sigma_retornos = float(ret_reciente.std())
-            _, sigma_skill = habilidades.get(nombre, (0.0, self._juez_sigma_prior()))
+            _, sigma_skill_ttt = habilidades.get(nombre, (0.0, self._juez_sigma_prior()))
+            sigma_skill = sigma_skill_ttt + self._incertidumbre_regimen_extra(nombre, fecha_corte)
 
             try:
                 crudo[nombre] = position_sizer.exposicion(
@@ -681,6 +685,47 @@ class BacktestEngine:
         convicción, sin exposición" (ver H4 en el plan de diseño).
         """
         return 10.0
+
+    def _incertidumbre_regimen_extra(self, nombre: str, fecha_corte: pd.Timestamp) -> float:
+        """
+        Hook opcional (duck-typing, no forma parte de `AbstractStrategy` —
+        forzarlo violaría ISP: la mayoría de estrategias no tienen noción de
+        "régimen"): si la estrategia expone `incertidumbre_regimen(log_rets)`
+        (ej. `HMMGARCHStrategy`, §1.5), se calcula sobre los log-retornos
+        causales del primer ticker de su universo y se suma a σ_skill_TTT en
+        `_pesos_via_sizer`.
+
+        Nota de escala: `incertidumbre_regimen` vive en [0, 1−1/K] (escala
+        de probabilidad); σ_skill_TTT vive en la escala interna de TTT. La
+        suma directa es, igual que `kappa_skill` en `KellyBayesianSizer`,
+        una aproximación honesta que requiere calibración empírica, no una
+        equivalencia teórica exacta.
+
+        Returns 0.0 (sin efecto) si la estrategia no expone el método, no
+        tiene universo válido en `self._datos`, o el cálculo falla — nunca
+        interrumpe el walk-forward por un fallo de este hook opcional.
+        """
+        try:
+            estrategia = self._zoo.obtener(nombre)
+        except KeyError:
+            return 0.0
+
+        metodo = getattr(estrategia, "incertidumbre_regimen", None)
+        if not callable(metodo):
+            return 0.0
+
+        universo = getattr(estrategia, "universo", [])
+        if not universo or universo[0] not in self._datos.columns:
+            return 0.0
+
+        try:
+            precios = self._datos.loc[self._datos.index <= fecha_corte, universo[0]].astype(float)
+            log_rets = np.log(precios / precios.shift(1)).dropna().values
+            if len(log_rets) < 30:
+                return 0.0
+            return float(metodo(log_rets))
+        except Exception:
+            return 0.0
 
     @staticmethod
     def _serie_desde_lista(
