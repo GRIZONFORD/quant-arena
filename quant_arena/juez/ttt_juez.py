@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
@@ -28,6 +29,9 @@ from typing import Dict, List, Optional, Tuple
 from trueskillthroughtime import History, Player, Gaussian  # type: ignore[import]
 
 from quant_arena.core.abstracciones import AbstractJuez, MetricasResultado
+from quant_arena.core.excepciones import CausalidadVioladaError
+
+logger = logging.getLogger(__name__)
 
 
 class TTTJuez(AbstractJuez):
@@ -63,6 +67,7 @@ class TTTJuez(AbstractJuez):
         epsilon: float = _EPSILON_DEFAULT,
         max_iteraciones: int = _MAX_ITER_DEFAULT,
         modo_causal_estricto: bool = True,
+        ventana: Optional[int] = None,
     ) -> None:
         """
         Args:
@@ -76,10 +81,38 @@ class TTTJuez(AbstractJuez):
                      Ref. README: history.convergence(epsilon=0.01).
             max_iteraciones: Límite de iteraciones EP.
                      Ref. README: history.convergence(iterations=10).
-            modo_causal_estricto: Si True, el llamador debe proveer solo datos
-                                  hasta t-1 antes de generar señales para t.
-                                  Si False, se usa el suavizador completo
-                                  (introduce look-ahead bias — solo para análisis).
+            modo_causal_estricto: Si True (default), `registrar_periodo()`
+                                  EXIGE que los períodos se registren en
+                                  orden temporal no decreciente — lanza
+                                  `CausalidadVioladaError` si `tiempo` es
+                                  anterior al último período ya registrado
+                                  (ver `registrar_periodo`, H6).
+
+                                  Esto es un guardia de ORDEN DE REGISTRO,
+                                  no una garantía completa contra el
+                                  look-ahead del suavizador de TTT: "Through
+                                  Time" propaga información hacia adelante
+                                  Y HACIA ATRÁS sobre TODO el historial
+                                  registrado en `_composition`. La garantía
+                                  causal real del sistema depende de que el
+                                  LLAMADOR (`BacktestEngine`) nunca registre
+                                  un período t+1 antes de consultar
+                                  `pesos_asignacion()` para el período t —
+                                  el motor ya cumple esto por construcción
+                                  (registra y consulta dentro de la misma
+                                  iteración del walk-forward, antes de
+                                  avanzar `fecha_corte`). Este guardia
+                                  detecta el error más común que rompería
+                                  esa disciplina: registrar fuera de orden.
+            ventana:  Si se especifica, `actualizar()` ajusta `History` solo
+                     sobre los últimos `ventana` períodos registrados en vez
+                     de todo el historial — el costo por rebalanceo pasa de
+                     O(T) a O(ventana) (H5). Trade-off: cada período fuera
+                     de la ventana pierde su influencia en el prior de
+                     habilidad; el "arranque" de cada ventana parte del
+                     prior sigma puro, no del posterior acumulado. None
+                     (default) usa el historial completo — comportamiento
+                     original sin cambios.
         """
         self.sigma: float = sigma
         self.gamma: float = gamma
@@ -87,6 +120,7 @@ class TTTJuez(AbstractJuez):
         self.epsilon: float = epsilon
         self.max_iteraciones: int = max_iteraciones
         self.modo_causal_estricto: bool = modo_causal_estricto
+        self.ventana: Optional[int] = ventana
 
         # Estado interno: historial de competencias en formato TTT
         # Ref. README: composition = lista de matchups
@@ -124,7 +158,22 @@ class TTTJuez(AbstractJuez):
 
         Garantía causal: este método SOLO registra el evento; NO ejecuta inferencia.
         La actualización del modelo ocurre explícitamente en self.actualizar().
+
+        Raises:
+            CausalidadVioladaError: si `modo_causal_estricto=True` y `tiempo`
+                es anterior al último período ya registrado (H6) — ver
+                docstring de `modo_causal_estricto` en `__init__`.
         """
+        if self.modo_causal_estricto and self._times:
+            tiempo_maximo_previo = max(self._times)
+            if float(tiempo) < tiempo_maximo_previo:
+                raise CausalidadVioladaError(
+                    f"registrar_periodo recibió tiempo={tiempo}, anterior al último "
+                    f"período ya registrado (t_max={tiempo_maximo_previo}). En "
+                    "modo_causal_estricto, los períodos deben registrarse en orden "
+                    "temporal no decreciente."
+                )
+
         if not metricas_periodo:
             return
 
@@ -159,7 +208,7 @@ class TTTJuez(AbstractJuez):
 
     def actualizar(self) -> None:
         """
-        Ejecuta la propagación de mensajes EP sobre el grafo factorial completo.
+        Ejecuta la propagación de mensajes EP sobre el grafo factorial.
 
         Ref. README:
           h = History(composition=composition, times=days, sigma=1.6, gamma=0.036)
@@ -168,14 +217,27 @@ class TTTJuez(AbstractJuez):
         Nota sobre causalidad: en modo_causal_estricto=True, el Motor de Backtesting
         es responsable de llamar a este método con self._composition[:t] antes de
         solicitar predicciones para el período t.
+
+        Ventana deslizante (H5): si `self.ventana` está configurado, el grafo
+        factorial se construye solo sobre los últimos `self.ventana` períodos
+        (composición y tiempos), no sobre el historial completo — el costo
+        por rebalanceo pasa de O(T) a O(ventana). Cada ventana nueva
+        "olvida" el posterior acumulado antes de su primer período (arranca
+        desde el prior `sigma` puro), a cambio de un costo acotado.
         """
         if not self._composition:
             return
 
+        composition = self._composition
+        times = self._times
+        if self.ventana is not None and len(composition) > self.ventana:
+            composition = composition[-self.ventana:]
+            times = times[-self.ventana:]
+
         # Ref. README: History(composition=composition, times=days, sigma=1.6, gamma=0.036)
         self._history = History(
-            composition=self._composition,
-            times=self._times,
+            composition=composition,
+            times=times,
             sigma=self.sigma,
             gamma=self.gamma,
             p_draw=self.p_draw,
@@ -246,7 +308,11 @@ class TTTJuez(AbstractJuez):
 
         return resultado
 
-    def pesos_asignacion(self, metodo: str = 'mu_sobre_sigma') -> Dict[str, float]:
+    def pesos_asignacion(
+        self,
+        metodo: str = 'mu_sobre_sigma',
+        fallback: str = 'uniforme',
+    ) -> Dict[str, float]:
         """
         Convierte habilidades latentes en pesos de asignación táctica de capital.
 
@@ -254,9 +320,39 @@ class TTTJuez(AbstractJuez):
           'mu_sobre_sigma': ratio señal/ruido (análogo a Sharpe bayesiano).
           'mu':             Media posterior bruta. Ignora incertidumbre.
           'softmax_mu':     Softmax sobre mu. Garantiza peso > 0 para todas.
+          'kelly_bayes':    mu / sigma² sobre la escala nativa del posterior
+                            TTT — forma de Kelly usando solo información
+                            interna del Juez (sin retornos realizados; para
+                            Kelly acoplado a retornos reales, ver
+                            `backtesting.kelly_sizing.KellyBayesianSizer`,
+                            que además NO fuerza suma=1). Penaliza la
+                            incertidumbre cuadráticamente en vez de
+                            linealmente frente a 'mu_sobre_sigma' (H4).
 
-        Garantías: sum(pesos.values()) == 1.0, pesos[i] >= 0.
+        Args:
+            metodo:   Ver arriba.
+            fallback: Qué hacer cuando TODOS los scores brutos son <= 0
+                     (nadie tiene ventaja positiva aparente):
+                       'uniforme' (default): reparte 1/N — comportamiento
+                            original, preserva sum(pesos)==1.0 siempre.
+                       'cash':    expone 0.0 a todas las estrategias en vez
+                            de invertir igual sin convicción alguna (H4).
+                            Rompe la garantía sum==1.0 EN ESTE CASO
+                            específico — ver nota de Garantías.
+                     Ignorado por 'softmax_mu' (nunca colapsa a score=0).
+
+        Garantías: pesos[i] >= 0 siempre. sum(pesos.values()) == 1.0 salvo
+        con fallback='cash' en el caso de scores todos no-positivos, donde
+        sum(pesos.values()) == 0.0 (sin exposición, a propósito).
+
+        Raises:
+            ValueError: si `metodo` o `fallback` no son reconocidos.
         """
+        if fallback not in ('uniforme', 'cash'):
+            raise ValueError(
+                f"fallback desconocido: '{fallback}'. Opciones: 'uniforme', 'cash'."
+            )
+
         habilidades: Dict[str, Tuple[float, float]] = self.habilidades_latentes()
         if not habilidades:
             return {}
@@ -267,6 +363,8 @@ class TTTJuez(AbstractJuez):
             scores_raw = {k: v[0] / v[1] for k, v in habilidades.items()}
         elif metodo == 'mu':
             scores_raw = {k: v[0] for k, v in habilidades.items()}
+        elif metodo == 'kelly_bayes':
+            scores_raw = {k: v[0] / (v[1] ** 2) for k, v in habilidades.items()}
         elif metodo == 'softmax_mu':
             nombres = list(habilidades.keys())
             mus = np.array([habilidades[n][0] for n in nombres])
@@ -276,13 +374,15 @@ class TTTJuez(AbstractJuez):
         else:
             raise ValueError(
                 f"Método desconocido: '{metodo}'. "
-                f"Opciones: 'mu_sobre_sigma', 'mu', 'softmax_mu'."
+                f"Opciones: 'mu_sobre_sigma', 'mu', 'kelly_bayes', 'softmax_mu'."
             )
 
         scores: Dict[str, float] = {k: max(v, 0.0) for k, v in scores_raw.items()}
         total: float = sum(scores.values())
 
         if total == 0.0:
+            if fallback == 'cash':
+                return {k: 0.0 for k in scores}
             n = len(scores)
             return {k: 1.0 / n for k in scores}
 
@@ -332,6 +432,51 @@ class TTTJuez(AbstractJuez):
         if self._history is None:
             return float('-inf')
         return float(self._history.log_evidence())
+
+    def calibrar_hiperparametros(
+        self,
+        bounds: Tuple[Tuple[float, float], Tuple[float, float]] = (
+            (1e-4, 10.0),
+            (1e-4, 10.0),
+        ),
+    ) -> Dict[str, float]:
+        """
+        Recalibra (σ, γ) maximizando la log-evidencia marginal sobre el
+        historial ya registrado, vía `calibracion.optimizador.OptimizadorTTT`
+        (roadmap v1.1 del README del proyecto).
+
+        Actualiza `self.sigma`/`self.gamma` IN-PLACE con los valores óptimos
+        encontrados e invalida el caché (`self._dirty = True`), por lo que
+        la siguiente llamada a `actualizar()`/`habilidades_latentes()`
+        reconstruye `History` con los nuevos hiperparámetros.
+
+        Args:
+            bounds: ((sigma_min, sigma_max), (gamma_min, gamma_max)) pasado
+                    a `OptimizadorTTT.calibrar()`.
+
+        Returns:
+            El diccionario de `OptimizadorTTT.calibrar()`:
+            {'sigma_optimo', 'gamma_optimo', 'log_evidencia_maxima'}.
+            Con < 2 períodos registrados, retorna (σ, γ) sin cambios
+            (mismo comportamiento de degradación que `OptimizadorTTT`,
+            que emite un `RuntimeWarning` en ese caso).
+        """
+        from quant_arena.calibracion.optimizador import OptimizadorTTT
+
+        composition, times = self.exportar_historial()
+        optimizador = OptimizadorTTT(
+            sigma_inicial=self.sigma,
+            gamma_inicial=self.gamma,
+            p_draw=self.p_draw,
+        )
+        resultado = optimizador.calibrar(composition, times, bounds=bounds)
+
+        self.sigma = resultado['sigma_optimo']
+        self.gamma = resultado['gamma_optimo']
+        self._dirty = True
+        self._history = None
+
+        return resultado
 
     def snapshot_estado(self) -> pd.DataFrame:
         """

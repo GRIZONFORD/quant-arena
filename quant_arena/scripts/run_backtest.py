@@ -351,11 +351,11 @@ class JuezBuilder:
         self, sigma_0: float, gamma_0: float
     ) -> Tuple[float, float]:
         """
-        Ajusta sigma/gamma mediante L-BFGS-B sobre datos históricos sintéticos.
-        Importa OptimizadorTTT solo si la calibración está habilitada.
+        Ajusta sigma/gamma sobre datos históricos sintéticos, delegando en
+        `TTTJuez.calibrar_hiperparametros()` (que a su vez usa
+        `OptimizadorTTT`, L-BFGS-B) en vez de reimplementar el mismo cálculo.
         """
         try:
-            from quant_arena.calibracion.optimizador import OptimizadorTTT
             from quant_arena.core.abstracciones import MetricasResultado
 
             logger.info("Calibrando hiperparámetros TTT (L-BFGS-B)...")
@@ -371,9 +371,7 @@ class JuezBuilder:
                 }
                 juez_temp.registrar_periodo(metricas_ep, tiempo=float(epoca))
 
-            comp, times = juez_temp.exportar_historial()
-            opt = OptimizadorTTT(sigma_inicial=sigma_0, gamma_inicial=gamma_0)
-            resultado = opt.calibrar(comp, times)
+            resultado = juez_temp.calibrar_hiperparametros()
 
             sigma_opt = resultado["sigma_optimo"]
             gamma_opt = resultado["gamma_optimo"]

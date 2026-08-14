@@ -179,9 +179,13 @@ class AbstractJuez(ABC):
         ...
 
     @abstractmethod
-    def pesos_asignacion(self, metodo: str = 'mu_sobre_sigma') -> Dict[str, float]:
+    def pesos_asignacion(
+        self, metodo: str = 'mu_sobre_sigma', fallback: str = 'uniforme'
+    ) -> Dict[str, float]:
         """
         Convierte habilidades latentes en pesos de asignación de capital.
-        Garantiza: sum(pesos.values()) == 1.0, pesos[i] >= 0.
+        Garantiza: pesos[i] >= 0 siempre; sum(pesos.values()) == 1.0 salvo
+        que `fallback='cash'` y ninguna estrategia tenga score positivo, en
+        cuyo caso sum(pesos.values()) == 0.0 (sin exposición, a propósito).
         """
         ...
