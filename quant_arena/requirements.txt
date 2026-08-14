@@ -12,6 +12,7 @@ xgboost>=2.0
 hmmlearn>=0.3
 arch>=6.0
 PyWavelets>=1.5
+statsmodels>=0.14  # diagnostics/ — validación de supuestos (ADF/KPSS/Ljung-Box/ARCH-LM/VIF)
 
 # === Deep Learning — P2, CPU build por defecto ===
 # Para GPU CUDA 12.x, instalar con:
