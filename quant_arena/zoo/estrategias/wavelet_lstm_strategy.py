@@ -44,6 +44,7 @@ try:
     _TORCH_OK = True
 except ImportError:
     _TORCH_OK = False
+    from quant_arena.core.torch_compat import nn  # type: ignore[assignment]
 
 from quant_arena.core.abstracciones import AbstractStrategy
 from quant_arena.zoo.base_estrategia import RegistroZoo
