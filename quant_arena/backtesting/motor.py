@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from quant_arena.backtesting.crowding import ArenaCrowding
 from quant_arena.backtesting.position_risk import TakeProfitATRRule, calcular_atr_pct, retornos_periodo_con_riesgo
 from quant_arena.backtesting.risk_overlay import RiskOverlay
 from quant_arena.core.abstracciones import AbstractJuez, MetricasResultado
@@ -162,6 +163,8 @@ class BacktestEngine:
         tp_rule: Optional[TakeProfitATRRule] = None,
         datos_ohlc: Optional[Dict[str, pd.DataFrame]] = None,
         atr_window: int = 14,
+        crowding: Optional[ArenaCrowding] = None,
+        aum_total: float = 1.0,
     ) -> None:
         """
         Args:
@@ -206,6 +209,17 @@ class BacktestEngine:
                               `position_risk.calcular_atr_pct`). Solo se usa
                               si `tp_rule` no es None.
             atr_window:       Ventana del ATR (Wilder) para `tp_rule`.
+            crowding:         ArenaCrowding opcional (§1.4): erosiona la
+                              exposición de cada estrategia según cuánto de
+                              su posición cae en tickers con alta demanda
+                              AGREGADA de capital de toda la arena (no solo
+                              su propia participación individual) — el
+                              acoplamiento que convierte el ranking TTT en
+                              una arena con interacción real entre
+                              estrategias. None (default) = sin cambios.
+            aum_total:        AUM total del meta-portafolio, en unidades
+                              monetarias consistentes con el `adv_por_ticker`
+                              de `crowding`. Ignorado si `crowding` es None.
         """
         if len(zoo) == 0:
             raise ValueError(
@@ -228,6 +242,8 @@ class BacktestEngine:
         self._tp_rule = tp_rule
         self._datos_ohlc = datos_ohlc or {}
         self._atr_window = atr_window
+        self._crowding = crowding
+        self._aum_total = aum_total
 
         cfg = kalman_config or {}
         self._kalman = KalmanSignalFilter(
@@ -447,6 +463,15 @@ class BacktestEngine:
             # ── 3f. Generar nuevas señales para el SIGUIENTE período ───────────
             #        CAUSAL: datos filtrados hasta fecha_corte inclusive.
             nuevas_señales = self._zoo.generar_señales_todas(self._datos, fecha_corte)
+
+            factores_crowding: Dict[str, float] = {}
+            if self._crowding is not None:
+                factores_crowding = self._crowding.factores_decaimiento(
+                    pesos_por_estrategia=nuevas_señales,
+                    capital_por_estrategia=pesos_juez_actuales,
+                    aum_total=self._aum_total,
+                )
+
             for nombre, pesos in nuevas_señales.items():
                 if self._risk_overlay is not None:
                     pesos = self._escalar_por_riesgo(
@@ -457,6 +482,8 @@ class BacktestEngine:
                         fecha_desde=fecha_desde,
                         fecha_hasta=fecha_corte,
                     )
+                if self._crowding is not None:
+                    pesos = pesos * factores_crowding.get(nombre, 1.0)
                 pesos_vigentes[nombre] = pesos
                 pesos_port_snapshots[nombre][fecha_corte] = pesos
 

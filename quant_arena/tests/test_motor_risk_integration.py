@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from quant_arena.backtesting.crowding import ArenaCrowding, CrowdingModel
 from quant_arena.backtesting.kelly_sizing import KellyBayesianSizer
 from quant_arena.backtesting.motor import BacktestEngine
 from quant_arena.backtesting.position_risk import TakeProfitATRRule
@@ -329,3 +330,57 @@ def test_incertidumbre_regimen_hook_ausente_no_afecta_default():
     )
     extra = engine._incertidumbre_regimen_extra("full", datos.index[100])
     assert extra == 0.0
+
+
+# ---------------------------------------------------------------------------
+# ArenaCrowding integrado (§1.4)
+# ---------------------------------------------------------------------------
+
+def test_crowding_none_es_no_regresion_exacta():
+    datos, benchmark = _datos_con_crash(n=300)
+
+    def _correr(crowding):
+        zoo = _zoo_dos_estrategias(datos)
+        juez = TTTJuez()
+        metricas = PerformanceMetrics(tasa_libre_riesgo_anual=0.02)
+        engine = BacktestEngine(
+            zoo=zoo, metricas=metricas, juez=juez, datos=datos, benchmark=benchmark,
+            crowding=crowding,
+        )
+        return engine.ejecutar_walk_forward(datos.index[0], datos.index[-1], frecuencia_rebalanceo=21)
+
+    sin_crowding_explicito = _correr(None)
+    con_crowding_desactivado = _correr(None)
+    pd.testing.assert_series_equal(
+        sin_crowding_explicito.retornos_meta, con_crowding_desactivado.retornos_meta
+    )
+
+
+def test_crowding_activo_reduce_exposicion_cuando_dos_estrategias_convergen():
+    """
+    Ambas estrategias de _zoo_dos_estrategias operan sobre el MISMO TICKER
+    (TICKER) — convergen por diseño del fixture. Con un ADV bajo para ese
+    ticker, ArenaCrowding debe erosionar la exposición efectiva frente al
+    caso sin crowding.
+    """
+    datos, benchmark = _datos_con_crash(n=300)
+
+    def _correr(crowding):
+        zoo = _zoo_dos_estrategias(datos)
+        juez = TTTJuez()
+        metricas = PerformanceMetrics(tasa_libre_riesgo_anual=0.02)
+        engine = BacktestEngine(
+            zoo=zoo, metricas=metricas, juez=juez, datos=datos, benchmark=benchmark,
+            crowding=crowding, aum_total=10_000_000.0,
+        )
+        return engine.ejecutar_walk_forward(datos.index[0], datos.index[-1], frecuencia_rebalanceo=21)
+
+    sin_crowding = _correr(None)
+    arena = ArenaCrowding(
+        CrowdingModel(kappa=3.0), adv_por_ticker={TICKER: 500_000.0}
+    )
+    con_crowding = _correr(arena)
+
+    std_sin = sin_crowding.retornos_meta.std()
+    std_con = con_crowding.retornos_meta.std()
+    assert std_con < std_sin
