@@ -29,7 +29,8 @@ class Adapter(EscenaBase):
 
         codigo = Code(
             code_string="class TTTJuez(AbstractJuez):\n    ...",
-            language="python", background="window", font_size=20,
+            language="python", background="window",
+            paragraph_config={"font_size": 20},
         ).scale(0.8).to_edge(DOWN, buff=0.6)
 
         self.narrar(

@@ -11,7 +11,8 @@ class GarchDistT(EscenaBase):
 
         antes = Code(
             code_string='GARCHModeler(dist="normal")  # hardcodeado',
-            language="python", background="window", font_size=22,
+            language="python", background="window",
+            paragraph_config={"font_size": 22},
         ).scale(0.9)
         tacha = Line(antes.get_left(), antes.get_right(), color=ROJO, stroke_width=5)
 
@@ -20,7 +21,8 @@ class GarchDistT(EscenaBase):
                 "dist = 't' if se_rechaza_normalidad else 'normal'\n"
                 "GARCHModeler(dist=dist)  # opt-in, verificado"
             ),
-            language="python", background="window", font_size=22,
+            language="python", background="window",
+            paragraph_config={"font_size": 22},
         ).scale(0.9)
         despues.next_to(antes, DOWN, buff=0.8)
 

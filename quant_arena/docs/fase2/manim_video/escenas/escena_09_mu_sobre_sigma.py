@@ -16,7 +16,8 @@ class MuSobreSigma(EscenaBase):
                 "    mu, sigma = self.habilidades_latentes()\n"
                 "    return (mu / sigma).clip(lower=0)  # Sharpe bayesiano"
             ),
-            language="python", background="window", font_size=22,
+            language="python", background="window",
+            paragraph_config={"font_size": 22},
         )
         codigo.scale(0.85)
 

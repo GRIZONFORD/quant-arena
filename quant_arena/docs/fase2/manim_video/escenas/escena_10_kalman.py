@@ -15,7 +15,8 @@ class Kalman(EscenaBase):
                 "serie_filt = self._kalman.filtrar(serie_bruta)\n"
                 "d[self._metrica_ranking] = valor_filtrado"
             ),
-            language="python", background="window", font_size=20,
+            language="python", background="window",
+            paragraph_config={"font_size": 20},
         ).scale(0.85).to_edge(UP, buff=1.2)
 
         codigo2 = Code(
@@ -25,7 +26,8 @@ class Kalman(EscenaBase):
                 "                  key=lambda x: x[1], reverse=True)\n"
                 "game = [[nombre] for nombre, _ in ranking]  # solo orden"
             ),
-            language="python", background="window", font_size=20,
+            language="python", background="window",
+            paragraph_config={"font_size": 20},
         ).scale(0.85).next_to(codigo1, DOWN, buff=0.6)
 
         self.narrar(
