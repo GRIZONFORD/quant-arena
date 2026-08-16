@@ -1,0 +1,6 @@
+# Salidas generadas por Manim/manim-voiceover — regenerables con render_all.sh,
+# no se versionan (son binarios pesados: video, audio, LaTeX intermedio).
+media/
+lista_escenas.txt
+video_ttt_congreso.mp4
+.venv/
