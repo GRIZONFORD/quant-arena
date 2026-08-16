@@ -8,13 +8,80 @@ from __future__ import annotations
 
 from manim import *
 from manim_voiceover import VoiceoverScene
-from manim_voiceover.services.gtts import GTTSService
 
-# Voz por defecto: gTTS (gratis, sin API key) para poder previsualizar ya.
-# Para la grabación final, cambiar por ElevenLabs (mejor prosodia en español):
+# Voz por defecto: intenta gTTS (gratis, requiere internet, mejor calidad).
+# Si no hay salida a internet (ej. entornos sandboxed/CI), cae automáticamente
+# a pyttsx3 (100% offline, usa espeak-ng — más robótico pero no depende de red).
+# Para la grabación final en tu compu con internet, cambiar por ElevenLabs
+# (mejor prosodia en español):
 #   from manim_voiceover.services.elevenlabs import ElevenLabsService
 #   VOZ = ElevenLabsService(voice_name="Nombre_de_tu_voz_ES")
-VOZ = GTTSService(lang="es", tld="com.mx")
+def _hay_internet_para_gtts() -> bool:
+    """Prueba una conexión HTTPS real (no solo DNS) a Google Translate.
+
+    DNS puede resolver aunque la conexión HTTPS esté bloqueada por un proxy
+    corporativo/sandbox, así que gethostbyname() solo no alcanza.
+    """
+    import urllib.request
+
+    try:
+        urllib.request.urlopen("https://translate.google.com", timeout=4)
+        return True
+    except Exception:
+        return False
+
+
+try:
+    if not _hay_internet_para_gtts():
+        raise OSError("sin salida HTTPS a translate.google.com")
+    from manim_voiceover.services.gtts import GTTSService
+
+    VOZ = GTTSService(lang="es", tld="com.mx")
+except OSError:
+    import subprocess
+    from pathlib import Path
+
+    import pyttsx3
+    from manim_voiceover.services.pyttsx3 import PyTTSX3Service
+
+    class _PyTTSX3ServiceMP3Real(PyTTSX3Service):
+        """El driver espeak de pyttsx3 en Linux escribe WAV real aunque se le
+        pida .mp3 (el nombre no cambia el contenido) — mutagen después falla
+        al leer el header MP3. Se genera a .wav y se convierte con ffmpeg."""
+
+        def generate_from_text(self, text, cache_dir=None, path=None, **kwargs):
+            if cache_dir is None:
+                cache_dir = self.cache_dir
+            input_data = {"input_text": text, "service": "pyttsx3"}
+            cached = self.get_cached_result(input_data, cache_dir)
+            if cached is not None:
+                return cached
+
+            audio_path = (path if path else self.get_audio_basename(input_data) + ".mp3")
+            final_path = Path(cache_dir) / audio_path
+            tmp_wav = final_path.with_suffix(".wav")
+
+            self.engine.save_to_file(text, str(tmp_wav))
+            self.engine.runAndWait()
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(tmp_wav), str(final_path)],
+                check=True,
+            )
+            tmp_wav.unlink(missing_ok=True)
+
+            return {
+                "input_text": text,
+                "input_data": input_data,
+                "original_audio": str(audio_path),
+            }
+
+    _engine = pyttsx3.init()
+    _engine.setProperty("rate", 165)
+    for _voz in _engine.getProperty("voices"):
+        if _voz.id.startswith("roa/es") or "es" in getattr(_voz, "languages", []):
+            _engine.setProperty("voice", _voz.id)
+            break
+    VOZ = _PyTTSX3ServiceMP3Real(engine=_engine)
 
 AZUL = "#4C72B0"
 ROJO = "#C44E52"
