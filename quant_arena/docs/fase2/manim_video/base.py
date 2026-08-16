@@ -90,12 +90,25 @@ NARANJA = "#DD8452"
 GRIS = "#808080"
 NEGRO = "#1A1A1A"
 
+# Cambiar a True para usar los audios grabados en audio_manual/<Escena>/
+# en vez de sintetizar voz. No hace falta tocar ninguna escena — el
+# switch es acá, una sola vez.
+USAR_AUDIO_MANUAL = False
+
 
 class EscenaBase(VoiceoverScene):
     """Toda escena del video hereda de acá y llama self.setup_voz() primero."""
 
     def setup_voz(self) -> None:
-        self.set_speech_service(VOZ)
+        if USAR_AUDIO_MANUAL:
+            from pathlib import Path
+
+            from manual_audio_service import ManualAudioService
+
+            carpeta = Path(__file__).parent / "audio_manual" / self.__class__.__name__
+            self.set_speech_service(ManualAudioService(audio_dir=carpeta))
+        else:
+            self.set_speech_service(VOZ)
         self.camera.background_color = WHITE
 
     def titulo(self, texto: str, font_size: int = 32) -> Text:
