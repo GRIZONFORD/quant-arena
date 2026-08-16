@@ -13,6 +13,10 @@ class Gaussianas(EscenaBase):
                    x_length=9, y_length=4.5, tips=False,
                    axis_config={"color": GRIS})
         ax.add_coordinates(font_size=18, color=GRIS)
+        etiquetas_ejes = ax.get_axis_labels(
+            x_label=Text("habilidad (μ)", font_size=20, color=GRIS),
+            y_label=Text("densidad", font_size=20, color=GRIS),
+        )
         titulo = self.titulo("Creencia sobre la habilidad de una estrategia")
 
         def gaussiana(mu, sigma):
@@ -30,7 +34,7 @@ class Gaussianas(EscenaBase):
             "con forma de campana. El centro de la campana, mu, es la "
             "habilidad estimada; qué tan ancha es, sigma, es cuánta "
             "incertidumbre tenemos sobre esa estimación.",
-            Write(titulo), Create(ax), Create(curva_ancha),
+            Write(titulo), Create(ax), FadeIn(etiquetas_ejes), Create(curva_ancha),
         )
         self.narrar(
             "Con pocas partidas, sigma es grande — el modelo admite que no "

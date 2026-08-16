@@ -22,10 +22,11 @@ class FeedbackLoop(EscenaBase):
             texto = Text(txt, font_size=18, color=BLACK).move_to(pos)
             nodos.add(VGroup(caja, texto))
 
-        def punto_borde(centro, hacia, margen=1.7):
+        def punto_borde(centro, hacia, margen=1.0):
             """Punto sobre la línea centro->hacia, a `margen` unidades de
-            centro — mantiene las flechas fuera del cuadro (half-diagonal
-            del cuadro es ~1.41), en vez de nacer/morir en su centro."""
+            centro — apenas fuera del cuadro (los nodos adyacentes están
+            a ~3.68 de distancia; 1.7 dejaba casi sin flecha, 1.0 despeja
+            el borde del cuadro y conserva largo visible)."""
             direccion = hacia - centro
             direccion = direccion / np.linalg.norm(direccion)
             return centro + direccion * margen
