@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, AZUL, NARANJA
+from base import EscenaBase, AZUL, NARANJA, GRIS
 
 
 class SplitSharpe(EscenaBase):
@@ -10,9 +10,11 @@ class SplitSharpe(EscenaBase):
         self.setup_voz()
 
         ax_izq = Axes(x_range=[0, 10, 2], y_range=[-0.5, 1.5, 0.5],
-                       x_length=5.5, y_length=4.5, tips=False).shift(LEFT * 3.3)
+                       x_length=5.5, y_length=4.5, tips=False,
+                       axis_config={"color": GRIS}).shift(LEFT * 3.3)
         ax_der = Axes(x_range=[0, 10, 2], y_range=[-0.5, 1.5, 0.5],
-                       x_length=5.5, y_length=4.5, tips=False).shift(RIGHT * 3.3)
+                       x_length=5.5, y_length=4.5, tips=False,
+                       axis_config={"color": GRIS}).shift(RIGHT * 3.3)
 
         c1 = ax_izq.plot(lambda x: 0.5 + 0.4 * np.sin(0.9 * x), color=AZUL)
         c2 = ax_izq.plot(lambda x: 0.5 + 0.4 * np.sin(0.9 * x + 1.4), color=NARANJA)

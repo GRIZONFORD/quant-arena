@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, VERDE
+from base import EscenaBase, VERDE, GRIS
 
 
 class Cierre(EscenaBase):
@@ -10,7 +10,8 @@ class Cierre(EscenaBase):
         self.setup_voz()
 
         ax = Axes(x_range=[0, 10, 2], y_range=[0.8, 2.2, 0.4],
-                   x_length=10, y_length=5, tips=False).to_edge(DOWN, buff=0.7)
+                   x_length=10, y_length=5, tips=False,
+                   axis_config={"color": GRIS}).to_edge(DOWN, buff=0.7)
 
         def equity_contenida(x):
             return 1 + 0.09 * x - 0.22 * np.exp(-((x - 6.5) ** 2) / 1.2) + 0.03 * np.sin(3 * x)

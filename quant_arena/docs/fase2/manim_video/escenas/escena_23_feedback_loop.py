@@ -22,9 +22,20 @@ class FeedbackLoop(EscenaBase):
             texto = Text(txt, font_size=18, color=BLACK).move_to(pos)
             nodos.add(VGroup(caja, texto))
 
+        def punto_borde(centro, hacia, margen=1.7):
+            """Punto sobre la línea centro->hacia, a `margen` unidades de
+            centro — mantiene las flechas fuera del cuadro (half-diagonal
+            del cuadro es ~1.41), en vez de nacer/morir en su centro."""
+            direccion = hacia - centro
+            direccion = direccion / np.linalg.norm(direccion)
+            return centro + direccion * margen
+
         flechas = VGroup(*[
-            CurvedArrow(nodos[i].get_center(), nodos[(i + 1) % 4].get_center(),
-                        angle=-TAU / 8, color=GREY)
+            CurvedArrow(
+                punto_borde(nodos[i].get_center(), nodos[(i + 1) % 4].get_center()),
+                punto_borde(nodos[(i + 1) % 4].get_center(), nodos[i].get_center()),
+                angle=-TAU / 8, color=GREY,
+            )
             for i in range(4)
         ])
 

@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, AZUL
+from base import EscenaBase, AZUL, GRIS
 
 
 class Gaussianas(EscenaBase):
@@ -10,7 +10,9 @@ class Gaussianas(EscenaBase):
         self.setup_voz()
 
         ax = Axes(x_range=[-4, 4, 1], y_range=[0, 1.2, 0.5],
-                   x_length=9, y_length=4.5, tips=False).add_coordinates()
+                   x_length=9, y_length=4.5, tips=False,
+                   axis_config={"color": GRIS})
+        ax.add_coordinates(font_size=18, color=GRIS)
         titulo = self.titulo("Creencia sobre la habilidad de una estrategia")
 
         def gaussiana(mu, sigma):

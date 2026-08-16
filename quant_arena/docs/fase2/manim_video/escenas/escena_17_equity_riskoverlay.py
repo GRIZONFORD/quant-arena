@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, ROJO, VERDE
+from base import EscenaBase, ROJO, VERDE, GRIS
 
 
 class EquityRiskOverlay(EscenaBase):
@@ -12,7 +12,7 @@ class EquityRiskOverlay(EscenaBase):
         titulo = self.titulo("Momentum + OLPS-RMR — S&P 500, 2015-2020")
 
         ax = Axes(x_range=[0, 10, 2], y_range=[0.6, 2.0, 0.4], x_length=9, y_length=4.5,
-                   tips=False).next_to(titulo, DOWN, buff=0.4)
+                   tips=False, axis_config={"color": GRIS}).next_to(titulo, DOWN, buff=0.4)
 
         def sin_riesgo(x):
             return 1 + 0.1 * x - 0.5 * np.exp(-((x - 6) ** 2) / 1.2)

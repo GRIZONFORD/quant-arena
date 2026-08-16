@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, AZUL, ROJO
+from base import EscenaBase, AZUL, ROJO, GRIS
 
 
 class Apertura(EscenaBase):
@@ -10,7 +10,8 @@ class Apertura(EscenaBase):
         self.setup_voz()
 
         ax = Axes(x_range=[0, 10, 2], y_range=[0.8, 2.2, 0.4],
-                   x_length=10, y_length=5, tips=False)
+                   x_length=10, y_length=5, tips=False,
+                   axis_config={"color": GRIS})
         ax.to_edge(DOWN, buff=0.7)
 
         def equity(x):

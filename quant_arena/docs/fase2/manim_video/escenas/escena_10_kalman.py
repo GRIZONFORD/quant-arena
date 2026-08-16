@@ -45,7 +45,7 @@ class Kalman(EscenaBase):
         )
 
         ax = Axes(x_range=[0, 8, 2], y_range=[0, 1, 0.5], x_length=6, y_length=2.2,
-                   tips=False).to_edge(DOWN, buff=0.4)
+                   tips=False, axis_config={"color": GRIS}).to_edge(DOWN, buff=0.4)
         cruda = ax.plot(lambda x: 0.5 + 0.3 * np.sin(1.6 * x), color=GRIS)
         suave = ax.plot(lambda x: 0.5 + 0.15 * np.sin(1.6 * x), color=AZUL)
         etq = Text("cruda (se cruza seguido) vs. filtrada (orden estable)",
