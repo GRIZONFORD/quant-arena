@@ -16,7 +16,7 @@ class BugFix(EscenaBase):
                 "    pesos = pesos / pesos.sum()  # BUG: anula la exposición\n"
                 "                                 # reducida de Kelly"
             ),
-            language="python", background="window",
+            language="python", background="window", formatter_style="monokai",
             paragraph_config={"font_size": 20},
         ).scale(0.85)
 

@@ -2,7 +2,7 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, ROJO
+from base import EscenaBase, ROJO, NEGRO
 
 
 class TablaNormalidad(EscenaBase):
@@ -11,18 +11,25 @@ class TablaNormalidad(EscenaBase):
 
         titulo = self.titulo("S&P 500 real — 7,394 observaciones (1997-2026)")
 
+        # element_to_mobject_config fija el mismo font_size Y color en el
+        # cuerpo que en los headers — antes ninguno de los dos tenía color
+        # explícito (default blanco = invisible sobre fondo blanco; solo
+        # se veían en rojo durante el pulso momentáneo de Indicate()).
         tabla = Table(
             [["Normalidad", "Jarque-Bera", "31,024", "p ≈ 0", "SE RECHAZA"],
              ["Homocedasticidad", "ARCH-LM", "—", "p ≈ 6e-155", "SE RECHAZA"]],
-            col_labels=[Text(c, font_size=20, weight=BOLD) for c in
+            col_labels=[Text(c, font_size=22, weight=BOLD, color=NEGRO) for c in
                         ["Test", "Estadístico", "Valor", "p-valor", "Resultado"]],
+            element_to_mobject_config={"font_size": 22, "color": NEGRO},
+            h_buff=0.9, v_buff=0.5,
             include_outer_lines=True,
-        ).scale(0.55)
-        tabla.next_to(titulo, DOWN, buff=0.6)
+        )
+        tabla.width = 11.5  # ancho fijo, garantiza que entre en el frame (14.2)
+        tabla.next_to(titulo, DOWN, buff=0.7)
 
         self.narrar(
             "Corrimos la batería completa de contrastes estadísticos "
-            "sobre los retornos reales.",
+            "sobre los retornos diarios reales del S&P 500.",
             Write(titulo), Create(tabla),
         )
         self.narrar(

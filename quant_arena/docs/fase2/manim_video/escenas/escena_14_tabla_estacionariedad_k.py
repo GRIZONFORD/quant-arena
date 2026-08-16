@@ -2,20 +2,25 @@
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, VERDE, ROJO, NARANJA
+from base import EscenaBase, VERDE, ROJO, NARANJA, NEGRO
 
 
 class TablaKOptimo(EscenaBase):
     def construct(self):
         self.setup_voz()
 
+        # Mismo fix que escena_13: color explícito, si no el texto por
+        # defecto es blanco e invisible sobre el fondo blanco.
         tabla = Table(
             [["Estacionariedad", "ADF + KPSS", "NO se rechaza"],
              ["Independencia (lag=20)", "Ljung-Box", "SE RECHAZA"]],
-            col_labels=[Text(c, font_size=20, weight=BOLD) for c in
+            col_labels=[Text(c, font_size=20, weight=BOLD, color=NEGRO) for c in
                         ["Test", "Método", "Resultado"]],
+            element_to_mobject_config={"font_size": 20, "color": NEGRO},
             include_outer_lines=True,
-        ).scale(0.55).to_edge(UP, buff=1.2)
+        )
+        tabla.width = 9
+        tabla.to_edge(UP, buff=1.2)
 
         comparacion = VGroup(
             Text("K=3", font_size=32, color=ROJO, weight=BOLD),

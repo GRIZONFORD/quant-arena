@@ -11,20 +11,26 @@ class GarchDistT(EscenaBase):
 
         antes = Code(
             code_string='GARCHModeler(dist="normal")  # hardcodeado',
-            language="python", background="window",
+            language="python", background="window", formatter_style="monokai",
             paragraph_config={"font_size": 22},
         ).scale(0.9)
-        tacha = Line(antes.get_left(), antes.get_right(), color=ROJO, stroke_width=5)
 
         despues = Code(
             code_string=(
                 "dist = 't' if se_rechaza_normalidad else 'normal'\n"
                 "GARCHModeler(dist=dist)  # opt-in, verificado"
             ),
-            language="python", background="window",
+            language="python", background="window", formatter_style="monokai",
             paragraph_config={"font_size": 22},
         ).scale(0.9)
-        despues.next_to(antes, DOWN, buff=0.8)
+
+        # Agrupados y centrados como bloque — antes "antes" quedaba en el
+        # centro por defecto y "despues" colgaba de él sin anclar el
+        # conjunto, dando una composición descentrada.
+        bloques = VGroup(antes, despues).arrange(DOWN, buff=0.8)
+        bloques.move_to(ORIGIN)
+
+        tacha = Line(antes.get_left(), antes.get_right(), color=ROJO, stroke_width=5)
 
         self.narrar(
             "La acción, no solo el diagnóstico: cuando se rechaza "

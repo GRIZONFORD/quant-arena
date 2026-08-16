@@ -14,14 +14,10 @@ class TTTTitulo(EscenaBase):
         correcto_grupo = VGroup(correcto, autor).arrange(DOWN, buff=0.3)
 
         incorrecto1 = Text("Test-Time Training", font_size=30, color=ROJO)
-        incorrecto2 = Text("\"Landfield\"", font_size=30, color=ROJO)
-        incorrectos = VGroup(incorrecto1, incorrecto2).arrange(DOWN, buff=0.4)
-        incorrectos.next_to(correcto_grupo, DOWN, buff=1.0)
+        incorrecto1.next_to(correcto_grupo, DOWN, buff=1.0)
 
-        tachas = VGroup(*[
-            Line(t.get_left(), t.get_right(), color=ROJO, stroke_width=5)
-            for t in (incorrecto1, incorrecto2)
-        ])
+        tacha = Line(incorrecto1.get_left(), incorrecto1.get_right(),
+                      color=ROJO, stroke_width=5)
 
         self.narrar(
             "Aquí es importante ser precisos, porque es el tipo de error "
@@ -37,6 +33,6 @@ class TTTTitulo(EscenaBase):
             "distinto de inteligencia artificial. Confundirlos no es un "
             "detalle cosmético, es citar mal el método central del "
             "proyecto.",
-            FadeIn(incorrectos), Create(tachas),
+            FadeIn(incorrecto1), Create(tacha),
         )
         self.wait(1)

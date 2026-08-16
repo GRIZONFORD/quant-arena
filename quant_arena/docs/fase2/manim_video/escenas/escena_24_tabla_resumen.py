@@ -9,7 +9,7 @@ graba con ElevenLabs para decir "ciento noventa y cuatro" en vez de
 from manim import *
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from base import EscenaBase, VERDE
+from base import EscenaBase, VERDE, NEGRO
 
 
 class TablaResumen(EscenaBase):
@@ -18,14 +18,19 @@ class TablaResumen(EscenaBase):
 
         titulo = self.titulo("Hitos completados")
 
+        # Sin color explícito el texto por defecto es blanco — la tabla
+        # entera quedaba invisible hasta que la última fila se pintaba de
+        # verde al final, dando la sensación de que "tardaba en aparecer".
         tabla = Table(
             [["§1.1 Riesgo", "Sharpe 0.60→0.73 sobre datos reales"],
              ["§1.2 Kelly", "acoplado a incertidumbre TTT"],
              ["§1.3 Juez TTT", "causalidad exigida, costo acotado"],
              ["§1.5 Diagnósticos", "K=4 vs K=3 por criterio real"],
              ["Pruebas automatizadas", "194/194 — sin errores de tipos"]],
+            element_to_mobject_config={"color": NEGRO},
             include_outer_lines=True,
-        ).scale(0.5)
+        )
+        tabla.width = 10.5
         tabla.next_to(titulo, DOWN, buff=0.5)
 
         self.narrar(

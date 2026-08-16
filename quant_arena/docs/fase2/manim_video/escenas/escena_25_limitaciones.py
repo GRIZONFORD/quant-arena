@@ -14,8 +14,8 @@ class Limitaciones(EscenaBase):
             Text(f"• {t}", font_size=24, color=BLACK)
             for t in [
                 "κ de Kelly sin calibrar",
-                "Crowding: diseño validado, ADV estático (no dinámico)",
-                "9 de 11 estrategias del Zoo con dependencias ML",
+                "Crowding: implementado y con tests, ADV estático (no dinámico)",
+                "8 de 11 estrategias del Zoo",
                 "aún no auditadas en profundidad",
             ]
         ]).arrange(DOWN, buff=0.35, aligned_edge=LEFT)
@@ -30,15 +30,18 @@ class Limitaciones(EscenaBase):
             Write(titulo), FadeIn(items[0]),
         )
         self.narrar(
-            "El mecanismo de crowding ya está implementado y con tests, "
-            "pero la demanda de volumen diario sigue siendo un snapshot "
-            "estático, no dinámico.",
+            "El mecanismo de crowding ya está implementado y con tests "
+            "propios, pero la demanda de volumen diario sigue siendo un "
+            "snapshot estático, no dinámico.",
             FadeIn(items[1]),
         )
         self.narrar(
-            "Y de las once estrategias del Zoo, solo pudimos auditar en "
-            "profundidad las que no dependen de librerías de deep "
-            "learning pesadas — el resto queda para el siguiente ciclo.",
+            "Y de las once estrategias del Zoo, auditamos en profundidad "
+            "tres — momentum, OLPS-RMR y HMM-GARCH. Las otras ocho, "
+            "sobre todo las que dependen de librerías de deep learning "
+            "pesadas, corrieron todas juntas en un backtest real, pero "
+            "no recibieron la misma revisión línea por línea — quedan "
+            "para el siguiente ciclo.",
             FadeIn(items[2]), FadeIn(items[3]),
         )
         self.wait(1)

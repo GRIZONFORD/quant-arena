@@ -29,7 +29,7 @@ class Adapter(EscenaBase):
 
         codigo = Code(
             code_string="class TTTJuez(AbstractJuez):\n    ...",
-            language="python", background="window",
+            language="python", background="window", formatter_style="monokai",
             paragraph_config={"font_size": 20},
         ).scale(0.8).to_edge(DOWN, buff=0.6)
 

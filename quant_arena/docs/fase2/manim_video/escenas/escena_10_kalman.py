@@ -15,9 +15,9 @@ class Kalman(EscenaBase):
                 "serie_filt = self._kalman.filtrar(serie_bruta)\n"
                 "d[self._metrica_ranking] = valor_filtrado"
             ),
-            language="python", background="window",
-            paragraph_config={"font_size": 20},
-        ).scale(0.85).to_edge(UP, buff=1.2)
+            language="python", background="window", formatter_style="monokai",
+            paragraph_config={"font_size": 18},
+        ).scale(0.7)
 
         codigo2 = Code(
             code_string=(
@@ -26,9 +26,14 @@ class Kalman(EscenaBase):
                 "                  key=lambda x: x[1], reverse=True)\n"
                 "game = [[nombre] for nombre, _ in ranking]  # solo orden"
             ),
-            language="python", background="window",
-            paragraph_config={"font_size": 20},
-        ).scale(0.85).next_to(codigo1, DOWN, buff=0.6)
+            language="python", background="window", formatter_style="monokai",
+            paragraph_config={"font_size": 18},
+        ).scale(0.7)
+
+        # Ambos bloques apilados y anclados arriba, en vez de encadenados
+        # con next_to (eso los dejaba pisando el gráfico de abajo).
+        codigos = VGroup(codigo1, codigo2).arrange(DOWN, buff=0.35)
+        codigos.to_edge(UP, buff=0.5)
 
         self.narrar(
             "Un detalle que suele pasar desapercibido: antes de que el "
