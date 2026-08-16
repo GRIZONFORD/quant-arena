@@ -1,0 +1,5 @@
+manim>=0.19
+manim-voiceover[gtts]>=0.3
+# Para la voz final de calidad de conferencia, reemplazar gTTS por ElevenLabs:
+#   pip install "manim-voiceover[elevenlabs]"
+# y editar base.py: VOZ = ElevenLabsService(voice_name="...")  (requiere ELEVENLABS_API_KEY)
