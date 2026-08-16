@@ -16,18 +16,27 @@ class CrowdingEcuacion(EscenaBase):
         )
         formula.set_color_by_tex("AUM", ROJO)
 
+        glosa = Text(
+            "AUM: plata invertida en la estrategia.\n"
+            "ADV: cuánto de ese activo se mueve\npor día en el mercado.",
+            font_size=20, color=BLACK,
+        ).next_to(formula, DOWN, buff=0.6)
+
         self.narrar(
-            "El mecanismo propuesto es crowding: el alpha efectivo de "
-            "una estrategia decae exponencialmente con la fracción de "
-            "capital que recibe, relativa al volumen diario del activo "
-            "que opera.",
+            "El mecanismo propuesto es lo que se llama crowding — "
+            "amontonamiento: la ventaja real de una estrategia decae "
+            "exponencialmente con la fracción de capital que recibe, "
+            "relativa al volumen que ese activo mueve en un día "
+            "normal.",
             Write(formula),
         )
         self.narrar(
-            "Es el mismo principio de rendimientos decrecientes a "
-            "escala documentado por Berk y Green — cuanto más capital "
-            "persigue la misma ventaja, menor rendimiento marginal por "
-            "unidad invertida.",
-            Indicate(formula, scale_factor=1.1),
+            "Cuanto más grande la apuesta comparada con ese volumen "
+            "diario, más se nota la propia operación en el precio, y "
+            "menos ventaja real queda. Es el mismo principio de "
+            "rendimientos decrecientes a escala documentado por Berk y "
+            "Green — cuanto más capital persigue la misma ventaja, "
+            "menor rendimiento por unidad invertida.",
+            FadeIn(glosa), Indicate(formula, scale_factor=1.1),
         )
         self.wait(1)

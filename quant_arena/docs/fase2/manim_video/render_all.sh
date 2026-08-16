@@ -44,6 +44,7 @@ declare -A ESCENAS=(
 
 # Orden explícito (los diccionarios bash no garantizan orden de inserción)
 ORDEN=(
+    escena_00_glosario:Glosario
     escena_01_apertura:Apertura
     escena_02_split_sharpe:SplitSharpe
     escena_03_ranking_tabla:RankingTabla
@@ -56,6 +57,7 @@ ORDEN=(
     escena_10_kalman:Kalman
     escena_11_adapter:Adapter
     escena_12_pregunta_supuestos:PreguntaSupuestos
+    escena_12b_hmm_garch_glosa:HMMGarchGlosa
     escena_13_tabla_normalidad:TablaNormalidad
     escena_14_tabla_estacionariedad_k:TablaKOptimo
     escena_15_garch_dist_t:GarchDistT

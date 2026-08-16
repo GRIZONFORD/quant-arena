@@ -18,20 +18,22 @@ class KellyEcuacion(EscenaBase):
         formula.set_color_by_tex(r"\sigma^2_{\text{skill,TTT}}", NARANJA)
 
         self.narrar(
-            "El segundo hallazgo era más sutil: los pesos del Juez "
-            "siempre suman uno y siempre se invierten al cien por "
-            "ciento, sin importar cuánta convicción tenga realmente el "
+            "El segundo hallazgo era más sutil: el dinero siempre se "
+            "repartía sumando cien por ciento entre las estrategias, "
+            "sin importar cuánta convicción tuviera realmente el "
             "modelo.",
             Write(formula),
         )
         self.narrar(
-            "La corrección es Kelly bayesiano: la fracción óptima de "
-            "capital es mu sobre sigma al cuadrado — pero aquí sigma al "
-            "cuadrado no es solo la varianza de los retornos. Sumamos la "
-            "varianza del posterior de habilidad que TTT ya calcula. "
-            "Cuando el Juez tiene poca convicción en una estrategia, esa "
-            "incertidumbre penaliza directamente el tamaño de la "
-            "apuesta.",
+            "La corrección usa el criterio de Kelly — una fórmula "
+            "clásica de teoría de apuestas, que dice qué fracción de tu "
+            "capital arriesgar dado cuánta ventaja creés tener y cuánta "
+            "certeza tenés de esa ventaja. Acá la certeza no viene solo "
+            "de la variabilidad de los retornos — sumamos también la "
+            "incertidumbre del posterior de habilidad que TTT ya "
+            "calcula. Cuando el Juez tiene poca convicción en una "
+            "estrategia, esa incertidumbre penaliza directamente cuánto "
+            "se le arriesga.",
             Indicate(formula, color=NARANJA, scale_factor=1.1),
         )
         self.wait(1)

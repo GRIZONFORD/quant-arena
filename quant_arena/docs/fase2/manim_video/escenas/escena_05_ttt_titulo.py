@@ -26,16 +26,17 @@ class TTTTitulo(EscenaBase):
         self.narrar(
             "Aquí es importante ser precisos, porque es el tipo de error "
             "que un tribunal ataca primero: este proyecto usa TrueSkill "
-            "Through Time, de Gustavo Landfried — inferencia bayesiana de "
-            "habilidad latente mediante Expectation Propagation sobre un "
-            "grafo factorial.",
+            "Through Time, de Gustavo Landfried — un método bayesiano, es "
+            "decir, que no calcula la habilidad de cero cada vez, sino que "
+            "actualiza una creencia previa con cada nuevo resultado, usando "
+            "un algoritmo llamado Expectation Propagation.",
             Write(correcto_grupo),
         )
         self.narrar(
             "No es Test-Time Training, que es un campo completamente "
-            "distinto — adaptación de pesos de un modelo durante la "
-            "inferencia. Confundirlos no es un detalle cosmético, es citar "
-            "mal el método central del proyecto.",
+            "distinto de inteligencia artificial. Confundirlos no es un "
+            "detalle cosmético, es citar mal el método central del "
+            "proyecto.",
             FadeIn(incorrectos), Create(tachas),
         )
         self.wait(1)

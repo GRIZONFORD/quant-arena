@@ -24,9 +24,10 @@ class Gaussianas(EscenaBase):
 
         self.narrar(
             "TrueSkill Through Time mantiene, para cada estrategia, una "
-            "creencia — no un número, una distribución normal de media mu "
-            "y varianza sigma cuadrado. Mu es la habilidad estimada; sigma "
-            "es cuánta certeza tenemos sobre esa estimación.",
+            "creencia — no un número, una distribución de probabilidad "
+            "con forma de campana. El centro de la campana, mu, es la "
+            "habilidad estimada; qué tan ancha es, sigma, es cuánta "
+            "incertidumbre tenemos sobre esa estimación.",
             Write(titulo), Create(ax), Create(curva_ancha),
         )
         self.narrar(

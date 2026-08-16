@@ -29,16 +29,18 @@ class EquityRiskOverlay(EscenaBase):
         ).arrange(DOWN, buff=0.2, aligned_edge=LEFT).to_edge(DOWN, buff=0.4)
 
         self.narrar(
-            "La conectamos, con inyección de dependencias — opcional, "
-            "para no romper ningún resultado previo.",
+            "La conectamos, de forma opcional, para no romper ningún "
+            "resultado previo.",
             Write(titulo), Create(ax), Create(c1),
         )
         self.narrar(
-            "El resultado sobre datos reales: Sharpe anualizado sube de "
-            "0.60 a 0.73, y el máximo drawdown se reduce de menos 34 "
-            "por ciento a menos 20 por ciento. No es un backtest "
-            "sintético — es la misma estrategia, el mismo período, con "
-            "y sin el overlay aplicado a su propio track record.",
+            "El resultado sobre datos reales: el Sharpe anualizado sube "
+            "de 0.60 a 0.73, y la peor caída — desde el punto más alto "
+            "hasta el más bajo antes de recuperarse, lo que llamamos "
+            "drawdown — se reduce de menos 34 por ciento a menos 20 por "
+            "ciento. No es un backtest sintético — es la misma "
+            "estrategia, el mismo período, con y sin ese control de "
+            "riesgo aplicado a su propio historial real.",
             Create(c2), FadeIn(leyenda),
         )
         self.wait(1)

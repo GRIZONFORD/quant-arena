@@ -30,20 +30,24 @@ class TablaKOptimo(EscenaBase):
         comp_grupo.next_to(tabla, DOWN, buff=0.8)
 
         self.narrar(
-            "La estacionariedad no se rechaza — coherente con que ya "
-            "trabajamos en log-retornos.",
+            "La estacionariedad —que las propiedades estadísticas no "
+            "cambien con el tiempo— no se rechaza, coherente con que ya "
+            "trabajamos con retornos en vez de precios crudos.",
             Create(tabla),
         )
         self.narrar(
-            "Y encontramos algo más interesante: el número de regímenes "
-            "ocultos del HMM estaba fijo en 3 en el código original, sin "
-            "ningún criterio de selección.",
+            "Y encontramos algo más interesante: el número de 'estados "
+            "de ánimo' ocultos que el HMM asume estaba fijo en 3 en el "
+            "código original, sin ningún criterio de selección — "
+            "alguien lo puso a mano.",
             FadeIn(fila1),
         )
         self.narrar(
-            "Corrimos un barrido de K con BIC, AIC y validación cruzada "
-            "temporal — las tres métricas coinciden en que el K óptimo "
-            "sobre el historial completo es 4, no 3.",
+            "Corrimos un barrido probando distintos valores, evaluados "
+            "con tres criterios que castigan a un modelo por ser "
+            "innecesariamente complicado — las tres métricas coinciden "
+            "en que el número óptimo sobre el historial completo es 4, "
+            "no 3.",
             FadeIn(comparacion[2]), FadeIn(fila3),
         )
         self.wait(1)

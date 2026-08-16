@@ -25,15 +25,17 @@ class MuSobreSigma(EscenaBase):
         formula.next_to(codigo, DOWN, buff=0.8)
 
         self.narrar(
-            "De esa creencia se deriva directamente la asignación de "
-            "capital: el ratio mu sobre sigma, un Sharpe bayesiano.",
+            "De esa creencia se deriva directamente cuánto capital "
+            "recibe cada estrategia: el cociente mu sobre sigma — la "
+            "habilidad estimada dividida por la incertidumbre.",
             Create(codigo),
         )
         self.narrar(
             "Estrategias con alta habilidad estimada y alta certeza "
-            "reciben más capital que estrategias con la misma mu pero "
-            "mucha incertidumbre. La incertidumbre ya no es ruido "
-            "descartado — es una señal de sizing.",
+            "reciben más capital que estrategias con la misma habilidad "
+            "estimada pero mucha incertidumbre. La incertidumbre ya no "
+            "es ruido que se descarta — es información para decidir "
+            "cuánto arriesgar.",
             Write(formula),
         )
         self.wait(1)
