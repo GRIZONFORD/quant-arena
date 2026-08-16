@@ -44,11 +44,14 @@ declare -A ESCENAS=(
 
 # Orden explícito (los diccionarios bash no garantizan orden de inserción)
 ORDEN=(
-    escena_00_glosario:Glosario
     escena_01_apertura:Apertura
+    escena_00_glosario:Glosario
+    escena_01b_acto1_problema:Acto1Problema
     escena_02_split_sharpe:SplitSharpe
+    escena_02b_acto2_conflicto:Acto2Conflicto
     escena_03_ranking_tabla:RankingTabla
     escena_04_tres_problemas:TresProblemas
+    escena_04b_acto3_solucion:Acto3Solucion
     escena_05_ttt_titulo:TTTTitulo
     escena_06_ajedrez:Ajedrez
     escena_07_gaussianas:Gaussianas
@@ -61,17 +64,20 @@ ORDEN=(
     escena_13_tabla_normalidad:TablaNormalidad
     escena_14_tabla_estacionariedad_k:TablaKOptimo
     escena_15_garch_dist_t:GarchDistT
+    escena_15b_acto4_aplicacion:Acto4Aplicacion
     escena_16_texto_riesgo:TextoRiesgo
     escena_17_equity_riskoverlay:EquityRiskOverlay
     escena_18_kelly_ecuacion:KellyEcuacion
     escena_19_bug_fix:BugFix
     escena_20_kappa_nota:KappaNota
+    escena_19b_acto5_conclusion:Acto5Conclusion
     escena_21_ajedrez_pool:AjedrezPool
     escena_22_crowding_ecuacion:CrowdingEcuacion
     escena_23_feedback_loop:FeedbackLoop
     escena_24_tabla_resumen:TablaResumen
     escena_25_limitaciones:Limitaciones
     escena_26_cierre:Cierre
+    escena_26b_cta:CTA
     escena_27_logo:Logo
 )
 

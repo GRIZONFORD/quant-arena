@@ -27,12 +27,16 @@ class Apertura(EscenaBase):
         etiqueta.next_to(recuadro, UP, buff=0.2)
 
         self.narrar(
-            "Toda estrategia cuantitativa tiene una ventana de vigencia. El "
-            "problema no es que las estrategias fallen — es que fallan en "
-            "momentos distintos, y ninguna medida estática de performance "
-            "nos dice cuándo. La habilidad de una estrategia no es un número "
-            "fijo: es un proceso que evoluciona.",
+            "¿Qué pasaría si el modelo que usamos para invertir no solo "
+            "midiera resultados pasados, sino que aprendiera en tiempo "
+            "real de su propia incertidumbre?",
             Create(ax), Create(curva),
+        )
+        self.narrar(
+            "Toda estrategia cuantitativa tiene una ventana de vigencia. "
+            "El problema no es que las estrategias fallen — es que "
+            "fallan en momentos distintos, y ninguna medida estática de "
+            "qué tan bien le fue nos dice cuándo.",
         )
         self.play(Create(recuadro), FadeIn(etiqueta))
         self.wait(1)
