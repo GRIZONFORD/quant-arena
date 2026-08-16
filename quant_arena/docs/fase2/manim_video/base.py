@@ -101,14 +101,35 @@ class EscenaBase(VoiceoverScene):
     def titulo(self, texto: str, font_size: int = 32) -> Text:
         return Text(texto, font_size=font_size, weight=BOLD, color=NEGRO).to_edge(UP)
 
-    def narrar(self, texto: str, *animaciones, run_time: float | None = None):
-        """Ejecuta animaciones sincronizadas con la duración real del audio narrado."""
+    def narrar(
+        self,
+        texto: str,
+        *animaciones,
+        run_time: float | None = None,
+        anim_max: float = 1.3,
+    ):
+        """Reproduce animaciones a ritmo natural mientras narra.
+
+        Antes la animación se estiraba para durar exactamente lo mismo que
+        el audio completo (a veces 8-10s) — se veía en cámara lenta. Ahora
+        la animación corre rápido (tope `anim_max` segundos, con easing
+        suave tipo `smooth`) y el resto de la narración se cubre con una
+        pausa quieta, como en un explicador real: el gesto visual es
+        breve, la voz sigue y la imagen se sostiene.
+
+        `run_time` sigue disponible para forzar una duración específica
+        cuando una animación puntual necesita más o menos tiempo que el
+        default.
+        """
         with self.voiceover(text=texto) as tracker:
-            dur = run_time if run_time is not None else tracker.duration
             if animaciones:
-                self.play(*animaciones, run_time=dur)
+                dur = run_time if run_time is not None else min(anim_max, tracker.duration)
+                self.play(*animaciones, run_time=dur, rate_func=smooth)
+                resto = tracker.duration - dur
+                if resto > 0:
+                    self.wait(resto)
             else:
-                self.wait(dur)
+                self.wait(tracker.duration)
 
     def tarjeta_simple(self, titulo_txt: str, texto_narracion: str, font_size: int = 34):
         """Patrón repetido: título centrado en pantalla + narración sincronizada."""
